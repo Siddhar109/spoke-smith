@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
-import { formatDuration } from '@/lib/analysis/voiceMetrics'
-import { TalkingSpeedBar, AnswerTimeBar, FillerRateBar } from '@/components/ui/MetricBar'
+import { TalkingSpeedBar, AnswerTimeBar, ToneOfVoiceBar } from '@/components/ui/MetricBar'
+import { CallMomentum } from '@/components/ui/CallMomentum'
 
 export function LiveMeters() {
   const { metrics, startTime, status, answerStartTime } = useSessionStore()
@@ -32,27 +32,60 @@ export function LiveMeters() {
       ? Math.floor((Date.now() - answerStartTime) / 1000)
       : 0
 
+  // Synthetic Momentum Calculation
+  // 1. Base momentum 75%
+  // 2. Adjust based on WPM (sweet spot 130-160)
+  // 3. Adjust penalty for fillers
+  let momentum = 75
+  
+  if (metrics.wpm >= 130 && metrics.wpm <= 160) {
+    momentum += 15
+  } else if (metrics.wpm < 100 || metrics.wpm > 200) {
+    momentum -= 15
+  }
+  
+  if (metrics.fillerRate > 5) {
+    momentum -= 20
+  }
+
+  momentum = Math.max(0, Math.min(100, momentum))
+
+
   return (
-    <div className="w-full sm:w-72 mb-6 lg:mb-0 p-4 bg-slate-900/80 rounded-lg backdrop-blur border border-slate-800 space-y-4">
-      {/* Total session duration */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-          <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">REC</span>
-        </div>
-        <span className="text-xl font-mono text-white">
-          {formatDuration(elapsed)}
-        </span>
+    <div className="w-full sm:w-80 space-y-4">
+       {/* 
+          Container for the metrics. 
+          The screenshot shows a glass card effect for the WHOLE panel or individual cards.
+          The previous implementation had one big card.
+          The screenshot implies:
+          1. Top card: Call Host info (Keep separate or ignore for now)
+          2. Group of metric bars
+          3. Call momentum card
+          
+          I will render:
+          - A group of Metric Bars in one "Clean" panel or just stacked.
+          - Call Momentum below it.
+       */}
+       
+      {/* Metrics Bars Group */}
+      <div className="p-5 bg-slate-900/60 rounded-xl backdrop-blur-md border border-white/5 shadow-2xl space-y-6">
+         <TalkingSpeedBar wpm={metrics.wpm} />
+         <AnswerTimeBar seconds={answerDurationSeconds} />
+         <ToneOfVoiceBar fillerRate={metrics.fillerRate} />
       </div>
 
-      {/* Divider */}
-      <div className="h-px bg-slate-700" />
-
-      {/* Metric bars */}
-      <div className="space-y-4">
-        <TalkingSpeedBar wpm={metrics.wpm} />
-        <AnswerTimeBar seconds={answerDurationSeconds} />
-        <FillerRateBar fillersPerMinute={metrics.fillerRate} />
+      {/* Call Momentum */}
+      <CallMomentum momentum={momentum} />
+      
+      {/* Active Playbook / Context (Optional placeholder from screenshot) */}
+      <div className="p-4 bg-slate-800/40 rounded-xl border border-white/5 backdrop-blur-sm">
+        <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2">
+            Active Playbook
+        </div>
+        <div className="flex items-center justify-between text-sm text-slate-300 font-medium">
+            <span>Discovery / MEDDPICC</span>
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        </div>
       </div>
     </div>
   )

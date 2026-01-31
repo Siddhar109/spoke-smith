@@ -20,7 +20,7 @@ export interface RealtimeClientOptions {
 }
 
 export interface RealtimeClient {
-  connect: (token: string, audioTrack: MediaStreamTrack) => Promise<void>
+  connect: (token: string, audioTrack: MediaStreamTrack, model?: string) => Promise<void>
   disconnect: () => void
   sendEvent: (event: Record<string, unknown>) => void
   status: ConnectionStatus
@@ -131,7 +131,7 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
     }
   }
 
-  const connect = async (token: string, audioTrack: MediaStreamTrack) => {
+  const connect = async (token: string, audioTrack: MediaStreamTrack, model?: string) => {
     try {
       setStatus('connecting')
 
@@ -210,8 +210,9 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
       }
 
       console.log('[RealtimeClient] Sending SDP offer to OpenAI')
+      const realtimeModel = model || 'gpt-4o-realtime-preview'
       const response = await fetch(
-        'https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17',
+        `https://api.openai.com/v1/realtime?model=${realtimeModel}`,
         {
           method: 'POST',
           headers: {

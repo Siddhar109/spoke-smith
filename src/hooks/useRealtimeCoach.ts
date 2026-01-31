@@ -212,10 +212,10 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
           )
         }
 
-        const { client_secret } = await response.json()
+        const { client_secret, model } = await response.json()
 
         // Connect to OpenAI Realtime
-        await clientRef.current?.connect(client_secret, audioTrack)
+        await clientRef.current?.connect(client_secret, audioTrack, model)
       } catch (err) {
         const error =
           err instanceof Error ? err : new Error('Failed to connect')

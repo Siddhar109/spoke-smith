@@ -6,12 +6,15 @@ import httpx
 router = APIRouter()
 
 OPENAI_REALTIME_URL = "https://api.openai.com/v1/realtime/sessions"
+REALTIME_MODEL = os.getenv("OPENAI_REALTIME_MODEL", "gpt-4o-realtime-preview-2024-12-17")
+TRANSCRIPTION_MODEL = os.getenv("OPENAI_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe")
 
 
 class TokenResponse(BaseModel):
     """Response model for ephemeral token endpoint."""
     client_secret: str
     expires_at: int
+    model: str
 
 
 class TokenRequest(BaseModel):
@@ -61,12 +64,12 @@ async def create_ephemeral_token(request: TokenRequest = TokenRequest()):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "gpt-4o-realtime-preview-2024-12-17",
+                    "model": REALTIME_MODEL,
                     "voice": "alloy",
                     "instructions": system_prompt,
                     "tools": [NUDGE_TOOL],
                     "input_audio_transcription": {
-                        "model": "gpt-4o-mini-transcribe",
+                        "model": TRANSCRIPTION_MODEL,
                     },
                     "turn_detection": {
                         "type": "server_vad",
@@ -88,6 +91,7 @@ async def create_ephemeral_token(request: TokenRequest = TokenRequest()):
             return TokenResponse(
                 client_secret=data["client_secret"]["value"],
                 expires_at=data["client_secret"]["expires_at"],
+                model=REALTIME_MODEL,
             )
     except httpx.RequestError as e:
         raise HTTPException(
