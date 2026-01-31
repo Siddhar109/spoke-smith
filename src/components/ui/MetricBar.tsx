@@ -279,3 +279,111 @@ export function ToneOfVoiceBar({ fillerRate }: ToneOfVoiceBarProps) {
         />
     )
 }
+
+export interface FacePresenceBarProps {
+    value: number
+}
+
+export function FacePresenceBar({ value }: FacePresenceBarProps) {
+    let statusText = 'NO FACE'
+    let statusColor: MetricBarProps['statusColor'] = 'red'
+
+    if (value >= 0.6) {
+        statusText = 'GOOD'
+        statusColor = 'green'
+    } else if (value >= 0.25) {
+        statusText = 'PARTIAL'
+        statusColor = 'yellow'
+    }
+
+    const segments: Segment[] = [
+        { start: 0, end: 0.3, color: 'red' },
+        { start: 0.3, end: 0.6, color: 'yellow' },
+        { start: 0.6, end: 1, color: 'green' },
+    ]
+
+    return (
+        <MetricBar
+            label="Face Presence"
+            value={value}
+            min={0}
+            max={1}
+            segments={segments}
+            statusText={statusText}
+            statusColor={statusColor}
+            axisZoneLabels={['0%', '', '50%', '', '100%']}
+        />
+    )
+}
+
+export interface FramingBarProps {
+    value: number
+}
+
+export function FramingBar({ value }: FramingBarProps) {
+    let statusText = 'OFF CENTER'
+    let statusColor: MetricBarProps['statusColor'] = 'red'
+
+    if (value >= 0.7) {
+        statusText = 'CENTERED'
+        statusColor = 'green'
+    } else if (value >= 0.45) {
+        statusText = 'ADJUST'
+        statusColor = 'yellow'
+    }
+
+    const segments: Segment[] = [
+        { start: 0, end: 0.4, color: 'red' },
+        { start: 0.4, end: 0.7, color: 'yellow' },
+        { start: 0.7, end: 1, color: 'green' },
+    ]
+
+    return (
+        <MetricBar
+            label="Framing"
+            value={value}
+            min={0}
+            max={1}
+            segments={segments}
+            statusText={statusText}
+            statusColor={statusColor}
+            axisZoneLabels={['Off', '', 'Ok', '', 'Centered']}
+        />
+    )
+}
+
+export interface LightingBarProps {
+    value: number
+}
+
+export function LightingBar({ value }: LightingBarProps) {
+    let statusText = 'DIM'
+    let statusColor: MetricBarProps['statusColor'] = 'red'
+
+    if (value >= 0.7) {
+        statusText = 'GOOD'
+        statusColor = 'green'
+    } else if (value >= 0.45) {
+        statusText = 'OK'
+        statusColor = 'yellow'
+    }
+
+    const segments: Segment[] = [
+        { start: 0, end: 0.4, color: 'red' },
+        { start: 0.4, end: 0.7, color: 'yellow' },
+        { start: 0.7, end: 1, color: 'green' },
+    ]
+
+    return (
+        <MetricBar
+            label="Lighting"
+            value={value}
+            min={0}
+            max={1}
+            segments={segments}
+            statusText={statusText}
+            statusColor={statusColor}
+            axisZoneLabels={['Dim', '', 'Ok', '', 'Bright']}
+        />
+    )
+}

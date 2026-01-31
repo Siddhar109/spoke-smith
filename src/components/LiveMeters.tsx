@@ -2,12 +2,19 @@
 
 import { useEffect, useState } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
-import { TalkingSpeedBar, AnswerTimeBar, ToneOfVoiceBar } from '@/components/ui/MetricBar'
+import {
+  TalkingSpeedBar,
+  AnswerTimeBar,
+  ToneOfVoiceBar,
+  FacePresenceBar,
+  FramingBar,
+  LightingBar,
+} from '@/components/ui/MetricBar'
 import { CallMomentum } from '@/components/ui/CallMomentum'
 import { formatDuration } from '@/lib/analysis/voiceMetrics'
 
 export function LiveMeters() {
-  const { metrics, startTime, status, answerStartTime } = useSessionStore()
+  const { metrics, startTime, status, answerStartTime, faceMetrics } = useSessionStore()
   const [elapsed, setElapsed] = useState(0)
 
   // Update elapsed time every second
@@ -85,6 +92,36 @@ export function LiveMeters() {
 
       {/* Call Momentum */}
       <CallMomentum momentum={momentum} />
+
+      {/* Face Metrics */}
+      <div className="relative p-5 bg-slate-900/55 rounded-xl backdrop-blur-md border border-white/10 shadow-2xl space-y-4 overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:22px_22px] pointer-events-none opacity-40" />
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        <div className="relative z-10 flex items-center justify-between">
+          <span className="text-[10px] text-slate-300 uppercase tracking-widest font-bold">
+            Face Signals
+          </span>
+          {!faceMetrics.supported && (
+            <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+              Unsupported
+            </span>
+          )}
+        </div>
+
+        <div className="relative z-10 space-y-4">
+          {faceMetrics.supported ? (
+            <>
+              <FacePresenceBar value={faceMetrics.facePresent} />
+              <FramingBar value={faceMetrics.framing} />
+              <LightingBar value={faceMetrics.lighting} />
+            </>
+          ) : (
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Face tracking is not available in this browser.
+            </p>
+          )}
+        </div>
+      </div>
       
       {/* Active Playbook / Context */}
       <div className="p-4 bg-slate-900/40 rounded-xl border border-white/5 backdrop-blur-sm shadow-lg flex items-center justify-between">

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useMediaCapture } from '@/lib/media/useMediaCapture'
 import { useAudioRecorder } from '@/lib/media/useAudioRecorder'
 import { useRealtimeCoach } from '@/hooks/useRealtimeCoach'
+import { useFaceCoach } from '@/hooks/useFaceCoach'
 import { useSessionStore } from '@/stores/sessionStore'
 import { ScenarioSelector } from '@/components/ScenarioSelector'
 import { SessionControls } from '@/components/SessionControls'
@@ -39,6 +40,7 @@ export default function SessionPage() {
   const { startRecording, stopRecording } = useAudioRecorder()
   const { connect, disconnect, isConnected, isConnecting, error } =
     useRealtimeCoach()
+  useFaceCoach(stream)
   const {
     status,
     setStatus,

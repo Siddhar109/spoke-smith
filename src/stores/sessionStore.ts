@@ -63,6 +63,16 @@ export interface VoiceMetrics {
   fillerRate: number // fillers per minute (windowed)
 }
 
+export interface FaceMetrics {
+  facePresent: number
+  framing: number
+  distance: number
+  lighting: number
+  faceDetected: boolean
+  supported: boolean
+  lastUpdated: number | null
+}
+
 export interface TranscriptSegment {
   id: string
   text: string
@@ -91,6 +101,9 @@ interface SessionState {
 
   // Voice metrics
   metrics: VoiceMetrics
+
+  // Face metrics (local-only)
+  faceMetrics: FaceMetrics
 
   // Transcript
   transcript: TranscriptSegment[]
@@ -128,6 +141,9 @@ interface SessionActions {
 
   // Metrics actions
   updateMetrics: (metrics: Partial<VoiceMetrics>) => void
+
+  // Face metrics actions
+  updateFaceMetrics: (metrics: Partial<FaceMetrics>) => void
 
   // Transcript actions
   addTranscriptSegment: (segment: Omit<TranscriptSegment, 'id'>) => void
@@ -169,6 +185,15 @@ const initialState: SessionState = {
   nudges: [],
   currentNudge: null,
   metrics: { wpm: 0, fillerCount: 0, fillerRate: 0 },
+  faceMetrics: {
+    facePresent: 0,
+    framing: 0,
+    distance: 0,
+    lighting: 0,
+    faceDetected: false,
+    supported: true,
+    lastUpdated: null,
+  },
   transcript: [],
   audioChunks: [],
   audioBlob: null,
@@ -228,6 +253,12 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
   updateMetrics: (metrics) => {
     set((state) => ({
       metrics: { ...state.metrics, ...metrics },
+    }))
+  },
+
+  updateFaceMetrics: (metrics) => {
+    set((state) => ({
+      faceMetrics: { ...state.faceMetrics, ...metrics },
     }))
   },
 
