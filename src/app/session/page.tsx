@@ -302,6 +302,10 @@ export default function SessionPage() {
     el.currentTime = Math.max(0, seconds)
   }, [])
 
+  // Dropdown state
+  const [partnerRole, setPartnerRole] = useState<string>('Journalist')
+  const [situation, setSituation] = useState<string>('Interview')
+
   // Pre-session: Scenario selection
   if (status === 'idle' && !selectedScenario) {
     return (
@@ -363,6 +367,62 @@ export default function SessionPage() {
             </span>
           </div>
 
+          {/* Context Questions */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            {/* Q1: Who is it with */}
+            <div className="group relative px-8 py-6 bg-white rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_12px_30px_rgba(0,0,0,0.05)] hover:-translate-y-1 flex flex-col justify-center">
+               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                 <span className="text-xl font-light text-slate-800 tracking-tight">
+                   Who is it with
+                 </span>
+                 <div className="relative inline-block">
+                   <select
+                     value={partnerRole}
+                     onChange={(e) => setPartnerRole(e.target.value)}
+                     className="appearance-none bg-blue-50/50 hover:bg-blue-50 border border-blue-100 text-blue-700 py-2 pl-4 pr-10 rounded-xl text-lg font-medium leading-tight focus:outline-none focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
+                   >
+                     <option value="Journalist">Journalist</option>
+                     <option value="Public">Public</option>
+                     <option value="StakeHolder">StakeHolder</option>
+                     <option value="Partner">Partner</option>
+                     <option value="Customer">Customer</option>
+                   </select>
+                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-blue-500">
+                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                       <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                     </svg>
+                   </div>
+                 </div>
+                 <span className="text-xl font-light text-slate-800"></span>
+               </div>
+            </div>
+
+            {/* Q2: What's the situation */}
+             <div className="group relative px-8 py-6 bg-white rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_12px_30px_rgba(0,0,0,0.05)] hover:-translate-y-1 flex flex-col justify-center">
+               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                 <span className="text-xl font-light text-slate-800 tracking-tight">
+                   What's the situation
+                 </span>
+                 <div className="relative inline-block">
+                   <select
+                     value={situation}
+                     onChange={(e) => setSituation(e.target.value)}
+                     className="appearance-none bg-purple-50/50 hover:bg-purple-50 border border-purple-100 text-purple-700 py-2 pl-4 pr-10 rounded-xl text-lg font-medium leading-tight focus:outline-none focus:bg-white focus:border-purple-300 focus:ring-4 focus:ring-purple-500/10 transition-all cursor-pointer"
+                   >
+                     <option value="Interview">Interview</option>
+                     <option value="Crisis">Crisis</option>
+                     <option value="Demo">Demo</option>
+                   </select>
+                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-purple-500">
+                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                       <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                     </svg>
+                   </div>
+                 </div>
+                 <span className="text-xl font-light text-slate-800"></span>
+               </div>
+            </div>
+          </div>
           {/* Scenario Selector */}
           <div className="bg-transparent">
             <ScenarioSelector
