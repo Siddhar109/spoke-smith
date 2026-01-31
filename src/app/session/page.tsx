@@ -192,15 +192,32 @@ export default function SessionPage() {
     const words = postSessionTranscript.words
 
     const lines: Array<{ start: number; end: number; text: string }> = []
-    let current: { start: number; end: number; parts: string[]; wordCount: number } | null =
-      null
+    let current: { start: number; end: number; text: string; wordCount: number } | null = null
+
+    const appendWord = (base: string, token: string) => {
+      if (!token) return base
+      if (!base) return token
+
+      // Some providers include leading spaces in `token`. Preserve that as-is.
+      if (/^\s/.test(token)) return base + token
+      if (/\s$/.test(base)) return base + token
+
+      // Don't add spaces before closing punctuation or contraction suffixes.
+      if (/^[,.;:!?%)\]}»”’]/.test(token)) return base + token
+      if (/^['’]/.test(token)) return base + token
+
+      // Don't add spaces right after opening punctuation.
+      if (/[({[\u201c\u2018]$/.test(base)) return base + token
+
+      return `${base} ${token}`
+    }
 
     const maxWords = 18
     const maxSeconds = 6
 
     for (const w of words) {
       if (!current) {
-        current = { start: w.start, end: w.end, parts: [w.word], wordCount: 1 }
+        current = { start: w.start, end: w.end, text: w.word, wordCount: 1 }
         continue
       }
 
@@ -211,13 +228,13 @@ export default function SessionPage() {
         lines.push({
           start: current.start,
           end: current.end,
-          text: current.parts.join('').trim(),
+          text: current.text.trim(),
         })
-        current = { start: w.start, end: w.end, parts: [w.word], wordCount: 1 }
+        current = { start: w.start, end: w.end, text: w.word, wordCount: 1 }
         continue
       }
 
-      current.parts.push(w.word)
+      current.text = appendWord(current.text, w.word)
       current.end = w.end
       current.wordCount += 1
     }
@@ -226,7 +243,7 @@ export default function SessionPage() {
       lines.push({
         start: current.start,
         end: current.end,
-        text: current.parts.join('').trim(),
+        text: current.text.trim(),
       })
     }
 
