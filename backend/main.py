@@ -1,0 +1,49 @@
+from pathlib import Path
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
+from api.realtime import router as realtime_router
+from api.sessions import router as sessions_router
+
+app = FastAPI(
+    title="Kawkai API",
+    description="AI Media Training Coach Backend",
+    version="1.0.0",
+)
+
+# CORS middleware for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(realtime_router, prefix="/api/realtime", tags=["realtime"])
+app.include_router(sessions_router, prefix="/api/sessions", tags=["sessions"])
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "ok"}
+
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {
+        "name": "Kawkai API",
+        "version": "1.0.0",
+        "docs": "/docs",
+    }
