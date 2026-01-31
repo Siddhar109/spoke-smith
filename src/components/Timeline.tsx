@@ -29,16 +29,16 @@ function clamp(value: number, min: number, max: number) {
 function colorClass(color: TimelineMarkerColor) {
   switch (color) {
     case 'red':
-      return 'bg-red-500'
+      return 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
     case 'yellow':
-      return 'bg-yellow-400'
+      return 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]'
     case 'green':
-      return 'bg-green-500'
+      return 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
     case 'blue':
-      return 'bg-blue-500'
+      return 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]'
     case 'slate':
     default:
-      return 'bg-slate-400'
+      return 'bg-slate-400 shadow-[0_0_5px_rgba(148,163,184,0.4)]'
   }
 }
 
@@ -80,7 +80,7 @@ export function Timeline({
     : '0%'
 
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn('w-full py-4', className)}>
       <div
         role="slider"
         aria-label="Timeline"
@@ -89,8 +89,11 @@ export function Timeline({
         aria-valuenow={clamp(currentSeconds, 0, safeDuration)}
         tabIndex={0}
         onClick={handleBarClick}
-        className="relative h-3 rounded bg-slate-800 cursor-pointer select-none"
+        className="relative h-2 rounded-full bg-slate-800/60 border border-white/5 cursor-pointer select-none group backdrop-blur-sm"
       >
+        {/* Glow Track (on hover) */}
+        <div className="absolute inset-0 rounded-full bg-blue-500/0 group-hover:bg-blue-500/10 transition-colors duration-300" />
+
         {/* Markers */}
         {normalized.map((m) => {
           const left = safeDuration ? (m.startSeconds / safeDuration) * 100 : 0
@@ -110,7 +113,7 @@ export function Timeline({
                 onSeek?.(m.startSeconds)
               }}
               className={cn(
-                'absolute top-0 h-3 rounded',
+                'absolute top-1/2 -translate-y-1/2 h-3 rounded-full transition-transform hover:scale-125 hover:z-10',
                 hasRange ? 'opacity-40' : 'w-1.5 opacity-90',
                 colorClass(m.color ?? 'slate')
               )}
@@ -124,8 +127,16 @@ export function Timeline({
 
         {/* Playhead */}
         <div
-          className="absolute -top-1 h-5 w-0.5 bg-white/80 rounded"
+          className="absolute -top-1.5 h-5 w-0.5 bg-white z-20 shadow-[0_0_10px_rgba(255,255,255,0.8)] rounded-full transition-all duration-75"
           style={{ left: playheadLeft }}
+        >
+             <div className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-white rounded-full shadow-sm" />
+        </div>
+        
+        {/* Progress Fill (Optional: simple gradient from left to playhead) */}
+        <div 
+            className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-blue-500/40 to-blue-400/60 pointer-events-none"
+            style={{ width: playheadLeft }}
         />
       </div>
     </div>

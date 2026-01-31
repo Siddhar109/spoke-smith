@@ -34,72 +34,70 @@ export function LiveMeters() {
       : 0
 
   // Synthetic Momentum Calculation
-  // 1. Base momentum 75%
-  // 2. Adjust based on WPM (sweet spot 130-160)
-  // 3. Adjust penalty for fillers
   let momentum = 75
-  
   if (metrics.wpm >= 130 && metrics.wpm <= 160) {
     momentum += 15
   } else if (metrics.wpm < 100 || metrics.wpm > 200) {
     momentum -= 15
   }
-  
   if (metrics.fillerRate > 5) {
     momentum -= 20
   }
-
   momentum = Math.max(0, Math.min(100, momentum))
 
 
   return (
-    <div className="w-full sm:w-80 space-y-4">
-       {/* 
-          Container for the metrics. 
-          The screenshot shows a glass card effect for the WHOLE panel or individual cards.
-          The previous implementation had one big card.
-          The screenshot implies:
-          1. Top card: Call Host info (Keep separate or ignore for now)
-          2. Group of metric bars
-          3. Call momentum card
-          
-          I will render:
-          - A group of Metric Bars in one "Clean" panel or just stacked.
-          - Call Momentum below it.
-       */}
+    <div className="w-full sm:w-80 space-y-4 font-sans text-slate-200">
        
       {/* Metrics Bars Group */}
-      <div className="p-5 bg-slate-900/60 rounded-xl backdrop-blur-md border border-white/5 shadow-2xl space-y-6">
-         <div className="flex items-center justify-between">
+      <div className="relative p-6 bg-slate-900/60 rounded-xl backdrop-blur-md border border-white/10 shadow-2xl space-y-5 overflow-hidden group">
+         {/* Holo Grid Background */}
+         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none opacity-40" />
+         
+         {/* Top Accent Line */}
+         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+         {/* Header */}
+         <div className="flex items-center justify-between relative z-10 mb-2">
            <div className="flex items-center gap-2">
-             <span
-               className="inline-block h-2 w-2 rounded-full bg-red-500"
-               aria-hidden="true"
-             />
-             <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
-               REC
+             <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
+             </span>
+             <span className="text-[10px] text-slate-300 uppercase tracking-widest font-bold drop-shadow-sm">
+               Live Analysis
              </span>
            </div>
-           <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold tabular-nums">
-             {formatDuration(elapsed)}
-           </span>
+           <div className="px-2 py-0.5 rounded bg-slate-800/50 border border-white/5 backdrop-blur-sm">
+             <span className="text-[10px] text-slate-200 font-mono tracking-wider">
+              {formatDuration(elapsed)}
+             </span>
+           </div>
          </div>
-         <TalkingSpeedBar wpm={metrics.wpm} />
-         <AnswerTimeBar seconds={answerDurationSeconds} />
-         <ToneOfVoiceBar fillerRate={metrics.fillerRate} />
+
+         {/* Individual Metric Bars */}
+         <div className="space-y-4 relative z-10">
+            <TalkingSpeedBar wpm={metrics.wpm} />
+            <AnswerTimeBar seconds={answerDurationSeconds} />
+            <ToneOfVoiceBar fillerRate={metrics.fillerRate} />
+         </div>
       </div>
 
       {/* Call Momentum */}
       <CallMomentum momentum={momentum} />
       
-      {/* Active Playbook / Context (Optional placeholder from screenshot) */}
-      <div className="p-4 bg-slate-800/40 rounded-xl border border-white/5 backdrop-blur-sm">
-        <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2">
-            Active Playbook
+      {/* Active Playbook / Context */}
+      <div className="p-4 bg-slate-900/40 rounded-xl border border-white/5 backdrop-blur-sm shadow-lg flex items-center justify-between">
+        <div className="flex flex-col">
+            <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-0.5">
+                Active Playbook
+            </span>
+            <span className="text-sm text-slate-200 font-medium tracking-wide text-shadow-sm">
+                Discovery / MEDDPICC
+            </span>
         </div>
-        <div className="flex items-center justify-between text-sm text-slate-300 font-medium">
-            <span>Discovery / MEDDPICC</span>
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        <div className="h-6 w-6 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center shadow-[0_0_10px_rgba(34,197,94,0.1)]">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.8)] animate-pulse"></div>
         </div>
       </div>
     </div>

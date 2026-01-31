@@ -35,207 +35,142 @@ export function SessionControls({
   className,
 }: SessionControlsProps) {
   return (
-    <div className={cn('flex flex-col gap-4', className)}>
-      {/* Device selection */}
+    <div className={cn('flex flex-col gap-6', className)}>
+      {/* Device selection Card */}
       {!isConnected && !isConnecting && (audioDevices || videoDevices) && (
-        <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-800">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-slate-300">Devices</h3>
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden group hover:border-slate-200 transition-colors">
+          <div className="flex items-center justify-between mb-4 pl-1">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Device Setup</h3>
             {onRefreshDevices && (
               <button
                 type="button"
                 onClick={onRefreshDevices}
-                className="text-xs text-slate-400 hover:text-slate-300"
+                className="text-[10px] uppercase font-bold text-slate-400 hover:text-slate-600 tracking-wider transition-colors"
               >
                 Refresh
               </button>
             )}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {audioDevices && onSelectAudioDeviceId && (
               <div>
-                <label className="block text-xs text-slate-500 mb-1">
+                <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold pl-1">
                   Microphone
                 </label>
-                <select
-                  className="w-full text-sm bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-slate-200"
-                  value={selectedAudioDeviceId ?? ''}
-                  onChange={(e) =>
-                    onSelectAudioDeviceId(e.target.value || null)
-                  }
-                >
-                  <option value="">Default</option>
-                  {audioDevices.map((d, idx) => (
-                    <option key={d.deviceId} value={d.deviceId}>
-                      {d.label || `Microphone ${idx + 1}`}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                    <select
+                        className="w-full text-sm bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 transition-all appearance-none shadow-sm font-medium"
+                        value={selectedAudioDeviceId ?? ''}
+                        onChange={(e) =>
+                            onSelectAudioDeviceId(e.target.value || null)
+                        }
+                    >
+                    <option value="">Default System Microphone</option>
+                    {audioDevices.map((d, idx) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                        {d.label || `Microphone ${idx + 1}`}
+                        </option>
+                    ))}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                        <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                </div>
               </div>
             )}
 
             {videoDevices && onSelectVideoDeviceId && (
               <div>
-                <label className="block text-xs text-slate-500 mb-1">
+                <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold pl-1">
                   Camera
                 </label>
-                <select
-                  className="w-full text-sm bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-slate-200"
+                <div className="relative">
+                 <select
+                  className="w-full text-sm bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 transition-all appearance-none shadow-sm font-medium"
                   value={selectedVideoDeviceId ?? ''}
                   onChange={(e) =>
                     onSelectVideoDeviceId(e.target.value || null)
                   }
-                >
-                  <option value="">Default</option>
+                 >
+                  <option value="">Default System Camera</option>
                   {videoDevices.map((d, idx) => (
                     <option key={d.deviceId} value={d.deviceId}>
                       {d.label || `Camera ${idx + 1}`}
                     </option>
                   ))}
-                </select>
+                 </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                        <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-
-          <p className="text-xs text-slate-500 mt-3">
-            If device names are blank, click Start once to grant permissions.
-          </p>
         </div>
       )}
 
+      {/* Main Buttons */}
       {!isConnected && !isConnecting && (
         <Button
           onClick={onStart}
-          size="xl"
-          className="w-full bg-green-600 hover:bg-green-700 text-white"
+          size="lg"
+          className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-2xl shadow-[0_4px_14px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] transition-all duration-300 active:scale-[0.98] h-14"
         >
+          <span className="flex items-center gap-2">
+            Start Live Session
+          </span>
           <svg
-            className="w-5 h-5 mr-2"
+            className="w-5 h-5 ml-2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>
-          Start Session
         </Button>
       )}
 
       {isConnecting && (
         <Button
           disabled
-          size="xl"
-          className="w-full bg-yellow-600 text-white"
+          size="lg"
+          className="w-full bg-slate-100 text-slate-500 border border-slate-200 rounded-2xl h-14"
         >
-          <svg
-            className="w-5 h-5 mr-2 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
-          Connecting...
+          <div className="flex items-center justify-center gap-3">
+            <svg className="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="font-bold tracking-wide uppercase text-xs">Initializing...</span>
+          </div>
         </Button>
       )}
 
       {isConnected && (
         <Button
           onClick={onStop}
-          size="xl"
+          size="lg"
           variant="destructive"
-          className="w-full"
+          className="w-full bg-white hover:bg-red-50 text-red-600 border border-red-100 hover:border-red-200 rounded-2xl shadow-sm hover:shadow-md transition-all group h-14"
         >
-          <svg
-            className="w-5 h-5 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
-            />
-          </svg>
-          End Session
+          <span className="flex items-center gap-2 font-bold tracking-wide text-xs uppercase">
+             <div className="w-2 h-2 rounded-sm bg-red-500 group-hover:animate-pulse" />
+             End Session
+          </span>
         </Button>
       )}
 
       {onReset && !isConnected && !isConnecting && (
         <Button
           onClick={onReset}
-          variant="outline"
+          variant="ghost"
           size="lg"
-          className="w-full"
+          className="w-full text-slate-400 hover:text-slate-600 hover:bg-transparent uppercase tracking-widest text-[10px] font-bold h-auto py-2"
         >
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          Reset
+          Reset Configuration
         </Button>
       )}
-
-      {/* Status indicator */}
-      <div className="flex items-center justify-center gap-2 text-sm">
-        <span
-          className={cn(
-            'w-2 h-2 rounded-full',
-            isConnected
-              ? 'bg-green-500'
-              : isConnecting
-              ? 'bg-yellow-500 animate-pulse'
-              : 'bg-slate-500'
-          )}
-        />
-        <span className="text-slate-400">
-          {isConnected
-            ? 'Session active'
-            : isConnecting
-            ? 'Connecting to coach...'
-            : 'Ready to start'}
-        </span>
-      </div>
     </div>
   )
 }

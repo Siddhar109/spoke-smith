@@ -2,7 +2,6 @@
 
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
 
 export interface CallMomentumProps {
   momentum: number // 0-100
@@ -10,75 +9,83 @@ export interface CallMomentumProps {
 }
 
 export function CallMomentum({ momentum, label = "CALL MOMENTUM" }: CallMomentumProps) {
-  // Generate 15 bars for the visualization
-  const bars = Array.from({ length: 15 }, (_, i) => i)
+  // Generate 20 bars for a denser "Equalizer" look
+  const bars = Array.from({ length: 20 }, (_, i) => i)
   
-  // Calculate threshold index based on momentum (0-15)
-  // Higher momentum = more bars lit up
-  // However, the screenshot shows a specific pattern:
-  // - Left side has no bars or very faint ones
-  // - Right side adds bars as momentum increases?
-  // Let's assume standard "volume meter" style: simple threshold
-  const activeIndex = Math.floor((momentum / 100) * 15)
+  // Calculate threshold index based on momentum (0-20)
+  const activeIndex = Math.floor((momentum / 100) * 20)
 
-  // Color gradient for the bars
-  // Low momentum (left) -> Orange
-  // High momentum (right) -> Green
+  // Neon gradients for the momentum bars
   const getBarColor = (index: number, isActive: boolean) => {
     if (!isActive) return 'bg-slate-700/30'
     
     // Gradient from Orange (low index) to Green (high index)
-    if (index < 5) return 'bg-orange-500' 
-    if (index < 10) return 'bg-yellow-400'
-    return 'bg-green-500'
+    // Using bright neon variants
+    if (index < 6) return 'bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.6)]' 
+    if (index < 13) return 'bg-yellow-300 shadow-[0_0_8px_rgba(253,224,71,0.6)]'
+    return 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]'
   }
 
-  // Determine global status text
   const getStatusText = (val: number) => {
-    return `${Math.round(val)}% MOMENTUM`
+    return `${Math.round(val)}%`
   }
   
   return (
-    <div className="space-y-2 p-4 bg-slate-800/40 rounded-xl border border-white/5 backdrop-blur-sm shadow-xl">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+    <div className="space-y-3 p-5 bg-slate-900/60 rounded-xl border border-white/10 backdrop-blur-md shadow-xl relative overflow-hidden group">
+      {/* Subtle holo grid background effect */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none opacity-50" />
+
+      <div className="flex items-center justify-between relative z-10">
+        <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold text-shadow-sm">
           {label}
         </span>
+        {/* Animated pulse dot */}
+        <div className="flex items-center gap-1.5">
+             <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </div>
+            <span className="text-[10px] font-bold text-green-400 tracking-wider">LIVE</span>
+        </div>
       </div>
       
-      <div className="flex items-end justify-between gap-1 h-12">
-          {/* Main momentum percentage text on the left */}
-          <div className="flex-1 flex items-center h-full">
-               <span className="text-2xl font-light text-white tracking-tight">
+      <div className="flex items-end justify-between gap-4 h-14 relative z-10">
+          {/* Main momentum percentage text */}
+          <div className="flex flex-col justify-end">
+               <span className="text-4xl font-light text-white tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
                 {getStatusText(momentum)}
                </span>
+               <span className="text-[9px] text-slate-500 uppercase tracking-wider font-medium">Current Intensity</span>
           </div>
 
-          {/* Bars visualization on the right */}
-          <div className="flex items-end gap-[3px] h-8">
+          {/* Bars visualization */}
+          <div className="flex-1 flex items-end justify-end gap-[2px] h-10">
             {bars.map((i) => {
-                // Height pattern: sloping up or wave? Screenshot looks like wave or random heights.
-                // Let's make them slightly variable height for "audio visualizer" look
-                // Or just uniform ramping height? Screenshot: uniform height, maybe slightly taller at right?
-                // Actually screenshot shows uniform height pills.
                 const isActive = i <= activeIndex
-                const heightClass = "h-6 md:h-8" // uniform for now
                 
                 return (
                     <motion.div
                         key={i}
                         className={cn(
-                            "w-1.5 md:w-2 rounded-full transition-colors duration-300",
-                            getBarColor(i, isActive),
-                            isActive ? "shadow-[0_0_8px_rgba(255,255,255,0.3)]" : ""
+                            "w-1 md:w-1.5 rounded-t-sm transition-all duration-300",
+                            getBarColor(i, isActive)
                         )}
-                        initial={{ opacity: 0.5, scaleY: 0.8 }}
+                        initial={{ opacity: 0.5, scaleY: 0.5 }}
                         animate={{ 
-                            opacity: 1, 
-                            scaleY: isActive ? 1 : 0.8,
-                            height: isActive ? "100%" : "60%" // Dynamic height effect
+                            opacity: isActive ? 1 : 0.3, 
+                            height: isActive 
+                                ? `${40 + (Math.random() * 60)}%` // Dynamic "Audio" wave effect
+                                : "20%" 
                         }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        transition={{ 
+                            type: "spring", 
+                            stiffness: 300, 
+                            damping: 20,
+                            // Add some random variation to make it feel alive
+                            repeat: Infinity,
+                            repeatType: "reverse",
+                            duration: 0.5 + Math.random() * 0.5
+                        }}
                     />
                 )
             })}
