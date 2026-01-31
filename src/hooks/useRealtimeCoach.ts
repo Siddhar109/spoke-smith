@@ -66,7 +66,7 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
       },
       onSpeechStop: () => {},
       onAIResponseStart: () => {
-        // Reset answer timer when AI starts responding
+        // Reset answer timer when AI starts audible output.
         setAnswerStartTime(null)
       },
       onAIResponseDone: () => {

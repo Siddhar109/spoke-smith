@@ -31,6 +31,7 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
   let dataChannel: RTCDataChannel | null = null
   let status: ConnectionStatus = 'disconnected'
   let audioElement: HTMLAudioElement | null = null
+  let didEmitAIResponseStartForCurrentResponse = false
 
   const setStatus = (newStatus: ConnectionStatus) => {
     status = newStatus
@@ -108,7 +109,7 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
       // Response started
       case 'response.created': {
         console.log('[RealtimeClient] Response created')
-        options.onAIResponseStart?.()
+        didEmitAIResponseStartForCurrentResponse = false
         break
       }
 
@@ -116,12 +117,20 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
       case 'response.done': {
         console.log('[RealtimeClient] Response done')
         options.onAIResponseDone?.()
+        didEmitAIResponseStartForCurrentResponse = false
         break
       }
 
       // Response audio started
       case 'response.audio.delta': {
-        // Audio is handled via WebRTC track, not data channel
+        // Emit "AI response start" once we see the first audio delta for the
+        // current response. `response.created` can fire before the user is
+        // actually done speaking (or before audio output begins), which can
+        // cause UI timers to reset too early.
+        if (!didEmitAIResponseStartForCurrentResponse) {
+          didEmitAIResponseStartForCurrentResponse = true
+          options.onAIResponseStart?.()
+        }
         break
       }
 

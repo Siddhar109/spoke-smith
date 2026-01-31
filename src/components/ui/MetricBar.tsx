@@ -54,10 +54,6 @@ export function MetricBar({
   const clampedValue = Math.max(min, Math.min(max, value))
   const positionPercent = range > 0 ? ((clampedValue - min) / range) * 100 : 0
   
-  // Find current segment to determine indicator color (optional)
-  const currentSegment = segments.find(s => clampedValue >= s.start && clampedValue < s.end) 
-    || segments[segments.length-1]
-
   return (
     <div className="space-y-1 py-1">
       {/* Header Row */}

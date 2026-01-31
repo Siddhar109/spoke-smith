@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
 import { TalkingSpeedBar, AnswerTimeBar, ToneOfVoiceBar } from '@/components/ui/MetricBar'
 import { CallMomentum } from '@/components/ui/CallMomentum'
+import { formatDuration } from '@/lib/analysis/voiceMetrics'
 
 export function LiveMeters() {
   const { metrics, startTime, status, answerStartTime } = useSessionStore()
@@ -28,8 +29,8 @@ export function LiveMeters() {
   }
 
   const answerDurationSeconds =
-    status === 'recording' && answerStartTime
-      ? Math.floor((Date.now() - answerStartTime) / 1000)
+    status === 'recording' && answerStartTime !== null
+      ? Math.max(0, Math.floor((Date.now() - answerStartTime) / 1000))
       : 0
 
   // Synthetic Momentum Calculation
@@ -69,6 +70,20 @@ export function LiveMeters() {
        
       {/* Metrics Bars Group */}
       <div className="p-5 bg-slate-900/60 rounded-xl backdrop-blur-md border border-white/5 shadow-2xl space-y-6">
+         <div className="flex items-center justify-between">
+           <div className="flex items-center gap-2">
+             <span
+               className="inline-block h-2 w-2 rounded-full bg-red-500"
+               aria-hidden="true"
+             />
+             <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+               REC
+             </span>
+           </div>
+           <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold tabular-nums">
+             {formatDuration(elapsed)}
+           </span>
+         </div>
          <TalkingSpeedBar wpm={metrics.wpm} />
          <AnswerTimeBar seconds={answerDurationSeconds} />
          <ToneOfVoiceBar fillerRate={metrics.fillerRate} />
