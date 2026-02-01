@@ -362,6 +362,7 @@ export default function SessionPage() {
       })
       setCompanyBriefSummary(response.company_brief_summary)
       setCompanyContextStatus('ready')
+      setIsCompanyContextOpen(true)
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to create company brief'
