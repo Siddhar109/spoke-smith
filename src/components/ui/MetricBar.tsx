@@ -17,7 +17,7 @@ export interface MetricBarProps {
   max: number
   segments: Segment[]
   statusText?: string
-  statusColor?: 'green' | 'yellow' | 'red' | 'orange'
+  statusColor?: 'green' | 'yellow' | 'red' | 'orange' | 'slate'
   showValue?: boolean // deprecated usually, but kept for compat
   rightText?: ReactNode // Custom right side content
   axisZoneLabels?: string[] // Labels below the bar
@@ -156,7 +156,10 @@ export function TalkingSpeedBar({ wpm }: TalkingSpeedBarProps) {
   let statusText = 'GOOD SPEED'
   let statusColor: MetricBarProps['statusColor'] = 'green'
 
-  if (wpm < 100) {
+  if (wpm <= 0) {
+    statusText = 'LISTENING'
+    statusColor = 'slate'
+  } else if (wpm < 100) {
     statusText = 'TOO SLOW'
     statusColor = 'orange' // using orange for "bad" but not critical red
   } else if (wpm < 130) {
@@ -175,11 +178,11 @@ export function TalkingSpeedBar({ wpm }: TalkingSpeedBarProps) {
 
   // Visual Segments
   const segments: Segment[] = [
-    { start: 50, end: 120, color: 'orange' }, // Slow
-    { start: 120, end: 140, color: 'yellow' },
-    { start: 140, end: 170, color: 'green' }, // Ideal
-    { start: 170, end: 190, color: 'yellow' },
-    { start: 190, end: 250, color: 'red' },   // Fast
+    { start: 50, end: 100, color: 'orange' }, // Too slow
+    { start: 100, end: 130, color: 'yellow' }, // Slow
+    { start: 130, end: 160, color: 'green' }, // Good
+    { start: 160, end: 180, color: 'yellow' }, // Fast
+    { start: 180, end: 250, color: 'red' }, // Too fast
   ]
 
   return (

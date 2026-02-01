@@ -49,6 +49,8 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
   const wordTimingsRef = useRef<WordTiming[]>([])
   const currentUtteranceTextRef = useRef<string>('')
   const currentUtteranceWordCountRef = useRef<number>(0)
+  const currentUtteranceStartIndexRef = useRef<number>(0)
+  const currentUtteranceStartSecRef = useRef<number | null>(null)
 
   // Create client on mount
   useEffect(() => {
@@ -85,6 +87,8 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
         prosodyTrackerRef.current?.setActive(true)
         currentUtteranceTextRef.current = ''
         currentUtteranceWordCountRef.current = 0
+        currentUtteranceStartIndexRef.current = wordTimingsRef.current.length
+        currentUtteranceStartSecRef.current = Date.now() / 1000
         const { answerStartTime } = useSessionStore.getState()
         if (answerStartTime === null) setAnswerStartTime(Date.now())
       },
@@ -112,91 +116,82 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
         }
       },
       onTranscript: (text, isFinal) => {
-        const deltaText = text ?? ''
-        if (!isFinal) {
-          currentUtteranceTextRef.current += deltaText
+        const nowSec = Date.now() / 1000
 
+        const syncCurrentUtteranceTimings = (utteranceWords: string[]) => {
+          const startIndex = Math.max(
+            0,
+            Math.min(currentUtteranceStartIndexRef.current, wordTimingsRef.current.length)
+          )
+
+          // Replace the current-utterance region (keeps previous utterances intact).
+          wordTimingsRef.current.splice(startIndex)
+
+          const { answerStartTime } = useSessionStore.getState()
+          const utteranceStart =
+            currentUtteranceStartSecRef.current ??
+            (answerStartTime !== null ? answerStartTime / 1000 : nowSec)
+
+          const duration = Math.max(0.4, nowSec - utteranceStart)
+          const step = duration / Math.max(1, utteranceWords.length)
+
+          utteranceWords.forEach((word, index) => {
+            const start = utteranceStart + index * step
+            const end = utteranceStart + (index + 1) * step
+            wordTimingsRef.current.push({ word, start, end })
+          })
+        }
+
+        if (!isFinal) {
+          const deltaText = text ?? ''
+          if (!deltaText) return
+
+          currentUtteranceTextRef.current += deltaText
           const words = currentUtteranceTextRef.current
             .trim()
             .split(/\s+/)
             .filter(Boolean)
 
           const prevCount = currentUtteranceWordCountRef.current
-          if (words.length > prevCount) {
-            const now = Date.now() / 1000
-            for (let i = prevCount; i < words.length; i++) {
-              wordTimingsRef.current.push({ word: words[i], start: now, end: now })
-            }
-            currentUtteranceWordCountRef.current = words.length
+          if (words.length <= prevCount) return
 
-            const { wpm, fillerCount, fillerRate } = calculateMetrics(
-              wordTimingsRef.current,
-              30
-            )
-            updateMetrics({ wpm, fillerCount, fillerRate })
-          }
+          currentUtteranceWordCountRef.current = words.length
+          syncCurrentUtteranceTimings(words)
+
+          // Shorter window makes the UI feel more responsive.
+          const { wpm, fillerCount, fillerRate } = calculateMetrics(
+            wordTimingsRef.current,
+            12,
+            nowSec
+          )
+          updateMetrics({ wpm, fillerCount, fillerRate })
           return
         }
 
-        if (text.trim()) {
-          const nowSec = Date.now() / 1000
-          const finalWords = text.trim().split(/\s+/).filter(Boolean)
-          const prevCount = currentUtteranceWordCountRef.current
-          const newWords = finalWords.slice(prevCount)
-          const lastTiming =
-            wordTimingsRef.current.length > 0
-              ? wordTimingsRef.current[wordTimingsRef.current.length - 1].end
-              : null
-          const { answerStartTime } = useSessionStore.getState()
+        if (!text.trim()) return
 
-          if (newWords.length > 0) {
-            if (lastTiming !== null) {
-              const duration = Math.max(0.1, nowSec - lastTiming)
-              const step = duration / newWords.length
-              newWords.forEach((word, index) => {
-                const start = lastTiming + index * step
-                wordTimingsRef.current.push({
-                  word,
-                  start,
-                  end: start + step,
-                })
-              })
-            } else {
-              const utteranceStart =
-                answerStartTime !== null ? answerStartTime / 1000 : nowSec
-              const duration = Math.max(
-                newWords.length * 0.35,
-                nowSec - utteranceStart
-              )
-              const step = duration / newWords.length
-              const startBase = nowSec - duration
-              newWords.forEach((word, index) => {
-                const start = startBase + index * step
-                wordTimingsRef.current.push({
-                  word,
-                  start,
-                  end: start + step,
-                })
-              })
-            }
-          }
+        const finalWords = text.trim().split(/\s+/).filter(Boolean)
+        currentUtteranceWordCountRef.current = finalWords.length
+        syncCurrentUtteranceTimings(finalWords)
 
-          const { wpm, fillerCount, fillerRate } = calculateMetrics(
-            wordTimingsRef.current,
-            30
-          )
-          updateMetrics({ wpm, fillerCount, fillerRate })
+        const { wpm, fillerCount, fillerRate } = calculateMetrics(
+          wordTimingsRef.current,
+          12,
+          nowSec
+        )
+        updateMetrics({ wpm, fillerCount, fillerRate })
 
-          currentUtteranceTextRef.current = ''
-          currentUtteranceWordCountRef.current = 0
+        currentUtteranceTextRef.current = ''
+        currentUtteranceWordCountRef.current = 0
+        currentUtteranceStartIndexRef.current = wordTimingsRef.current.length
+        currentUtteranceStartSecRef.current = null
 
-          addTranscriptSegment({
-            text,
-            speaker: 'user',
-            startTime: Date.now(),
-            endTime: Date.now(),
-          })
-        }
+        addTranscriptSegment({
+          text,
+          speaker: 'user',
+          startTime: Date.now(),
+          endTime: Date.now(),
+        })
       },
       onError: (err) => {
         console.error('[useRealtimeCoach] Error:', err)
@@ -223,6 +218,8 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
       wordTimingsRef.current = []
       currentUtteranceTextRef.current = ''
       currentUtteranceWordCountRef.current = 0
+      currentUtteranceStartIndexRef.current = 0
+      currentUtteranceStartSecRef.current = null
       setAnswerStartTime(null)
       updateMetrics({ wpm: 0, fillerCount: 0, fillerRate: 0, prosodyVariance: 0 })
       userSpeakingRef.current = false
@@ -294,6 +291,8 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
     wordTimingsRef.current = []
     currentUtteranceTextRef.current = ''
     currentUtteranceWordCountRef.current = 0
+    currentUtteranceStartIndexRef.current = 0
+    currentUtteranceStartSecRef.current = null
     setAnswerStartTime(null)
     updateMetrics({ wpm: 0, fillerCount: 0, fillerRate: 0, prosodyVariance: 0 })
   }, [setAnswerStartTime, updateMetrics])

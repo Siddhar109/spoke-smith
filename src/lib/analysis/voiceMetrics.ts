@@ -38,27 +38,35 @@ export interface VoiceMetricsResult {
  */
 export function calculateMetrics(
   words: WordTiming[],
-  windowSeconds: number = 30
+  windowSeconds: number = 30,
+  nowSeconds: number = Date.now() / 1000
 ): VoiceMetricsResult {
   if (words.length === 0) {
     return { wpm: 0, fillerCount: 0, fillerRate: 0, averageWordLength: 0 }
   }
 
-  const now = Date.now() / 1000
-  const recentWords = words.filter((w) => now - w.end < windowSeconds)
+  const recentWords = words.filter((w) => nowSeconds - w.end < windowSeconds)
 
   if (recentWords.length < 2) {
     return { wpm: 0, fillerCount: 0, fillerRate: 0, averageWordLength: 0 }
   }
 
-  const duration =
-    recentWords[recentWords.length - 1].end - recentWords[0].start
-  if (duration <= 0.25) {
+  // Use speaking-time rather than wall-clock time between first/last word,
+  // to avoid long pauses (or transcription lag) incorrectly dragging WPM down.
+  const speakingDurationSeconds = recentWords.reduce((sum, word) => {
+    const raw = word.end - word.start
+    if (!Number.isFinite(raw)) return sum
+    // Clamp to reduce the impact of pauses being encoded as long word durations.
+    const clamped = Math.min(1.0, Math.max(0.05, raw))
+    return sum + clamped
+  }, 0)
+
+  if (speakingDurationSeconds <= 0.25) {
     return { wpm: 0, fillerCount: 0, fillerRate: 0, averageWordLength: 0 }
   }
 
   const wordCount = recentWords.length
-  const wpm = Math.round((wordCount / duration) * 60)
+  const wpm = Math.round((wordCount / speakingDurationSeconds) * 60)
 
   const normalizedWords = recentWords
     .map((w) =>
@@ -87,7 +95,8 @@ export function calculateMetrics(
     }
   }
 
-  const fillerRate = Math.round(((fillerCount / duration) * 60) * 10) / 10
+  const fillerRate =
+    Math.round(((fillerCount / speakingDurationSeconds) * 60) * 10) / 10
 
   const avgLength =
     recentWords.reduce((sum, w) => sum + w.word.length, 0) / wordCount
