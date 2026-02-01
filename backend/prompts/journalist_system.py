@@ -31,11 +31,13 @@ def create_journalist_prompt(
     if extra_context_blocks:
         extra_context = "\n\n".join(extra_context_blocks)
 
+    extra_context_section = f"{extra_context}\n" if extra_context else ""
+
     return f"""You are an experienced journalist conducting an interview. Your goal is to get good quotes and uncover the real story.
 
 ## Interview Context
 {scenario_context}
-{f"{extra_context}\n" if extra_context else ""}
+{extra_context_section}
 
 ## Your Behavior
 - Be professional but probing
