@@ -9,6 +9,12 @@ interface SessionControlsProps {
   onStart: () => void
   onStop: () => void
   onReset?: () => void
+  facePhraseModelEnabled?: boolean
+  faceKeyframesEnabled?: boolean
+  strictPrivacyMode?: boolean
+  onToggleFacePhraseModel?: (enabled: boolean) => void
+  onToggleFaceKeyframes?: (enabled: boolean) => void
+  onToggleStrictPrivacy?: (enabled: boolean) => void
   audioDevices?: MediaDeviceInfo[]
   videoDevices?: MediaDeviceInfo[]
   selectedAudioDeviceId?: string | null
@@ -25,6 +31,12 @@ export function SessionControls({
   onStart,
   onStop,
   onReset,
+  facePhraseModelEnabled,
+  faceKeyframesEnabled,
+  strictPrivacyMode,
+  onToggleFacePhraseModel,
+  onToggleFaceKeyframes,
+  onToggleStrictPrivacy,
   audioDevices,
   videoDevices,
   selectedAudioDeviceId,
@@ -106,6 +118,53 @@ export function SessionControls({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {(onToggleFacePhraseModel || onToggleStrictPrivacy || onToggleFaceKeyframes) && (
+        <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between mb-4 pl-1">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Face Coach</h3>
+          </div>
+          <div className="space-y-3">
+            {onToggleFacePhraseModel && (
+              <label className="flex items-center justify-between text-sm text-slate-700">
+                <span className="font-medium">AI phrasing</span>
+                <input
+                  type="checkbox"
+                  checked={!!facePhraseModelEnabled}
+                  onChange={(e) => onToggleFacePhraseModel(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300"
+                />
+              </label>
+            )}
+            {onToggleStrictPrivacy && (
+              <label className="flex items-center justify-between text-sm text-slate-700">
+                <span className="font-medium">Strict privacy mode</span>
+                <input
+                  type="checkbox"
+                  checked={!!strictPrivacyMode}
+                  onChange={(e) => onToggleStrictPrivacy(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300"
+                />
+              </label>
+            )}
+            {onToggleFaceKeyframes && (
+              <label className="flex items-center justify-between text-sm text-slate-700">
+                <span className="font-medium">Allow keyframes (cropped face)</span>
+                <input
+                  type="checkbox"
+                  checked={!!faceKeyframesEnabled}
+                  disabled={!facePhraseModelEnabled || !!strictPrivacyMode}
+                  onChange={(e) => onToggleFaceKeyframes(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300 disabled:opacity-40"
+                />
+              </label>
+            )}
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Keyframes are opt-in and sent rarely for verification. No raw video upload.
+            </p>
           </div>
         </div>
       )}

@@ -297,7 +297,7 @@ This supports debugging “why did it nudge me?” without storing sensitive ima
 
 ## Rollout Plan
 
-1. **Phase A (local-only):** show stable face metrics + simple local nudges, no OpenAI usage.
+1. **Phase A (local-only):** show stable face metrics + simple local nudges, no OpenAI usage. **(Done)**
 2. **Phase B (model phrasing):** send feature packets; model returns nudge text only.
 3. **Phase C (keyframes):** opt-in; confirm ambiguous cues with cropped images.
 4. **Phase D (personalization):** baseline calibration + per-user sensitivity.
@@ -310,3 +310,28 @@ This supports debugging “why did it nudge me?” without storing sensitive ima
 - Face-based coaching automatically disables when tracking quality is poor.
 - Model outputs are structured and never claim mental state; nudges remain actionable.
 - Keyframes are opt-in and rare; session works well without them.
+
+---
+
+## Phase A Implementation Status (Local-Only) ✅
+
+**Completed in app:**
+- **On-device face tracking (WASM):** MediaPipe **Face Landmarker** via `@mediapipe/tasks-vision` (no video upload).
+- **Local face signals (UI):** Face Presence, Framing, Lighting live meters.
+- **Simple local nudges (rate-limited):**
+  - “Keep your face in frame”
+  - “Center yourself in frame”
+  - “Add a little more front light”
+- **No OpenAI calls** for face coaching yet (purely local).
+
+**Implementation details:**
+- Sampling ~6 FPS, EMA smoothing, and 2s persistence gating for nudges.
+- Face box computed from landmarks (no identity, no emotion labels).
+- Lighting heuristic uses low-res luma sampling.
+- Auto-fallback if WASM/model fails to load.
+
+**Files touched (for reference):**
+- `src/hooks/useFaceCoach.ts` (MediaPipe face loop + nudges)
+- `src/components/LiveMeters.tsx` (Face Signals panel)
+- `src/components/ui/MetricBar.tsx` (face metric bars)
+- `src/stores/sessionStore.ts` (face metrics state)

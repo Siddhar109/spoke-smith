@@ -105,6 +105,11 @@ interface SessionState {
   // Face metrics (local-only)
   faceMetrics: FaceMetrics
 
+  // Face coaching settings
+  facePhraseModelEnabled: boolean
+  faceKeyframesEnabled: boolean
+  strictPrivacyMode: boolean
+
   // Transcript
   transcript: TranscriptSegment[]
 
@@ -136,7 +141,8 @@ interface SessionActions {
   setAnswerStartTime: (timestampMs: number | null) => void
 
   // Nudge actions
-  addNudge: (nudge: Omit<Nudge, 'id' | 'timestamp'>) => void
+  addNudge: (nudge: Omit<Nudge, 'id' | 'timestamp'>) => string
+  updateNudgeText: (id: string, text: string) => void
   clearCurrentNudge: () => void
 
   // Metrics actions
@@ -144,6 +150,11 @@ interface SessionActions {
 
   // Face metrics actions
   updateFaceMetrics: (metrics: Partial<FaceMetrics>) => void
+
+  // Face coach settings actions
+  setFacePhraseModelEnabled: (enabled: boolean) => void
+  setFaceKeyframesEnabled: (enabled: boolean) => void
+  setStrictPrivacyMode: (enabled: boolean) => void
 
   // Transcript actions
   addTranscriptSegment: (segment: Omit<TranscriptSegment, 'id'>) => void
@@ -194,6 +205,10 @@ const initialState: SessionState = {
     supported: true,
     lastUpdated: null,
   },
+  facePhraseModelEnabled:
+    process.env.NEXT_PUBLIC_FACE_PHRASE_MODEL_ENABLED === 'true',
+  faceKeyframesEnabled: false,
+  strictPrivacyMode: true,
   transcript: [],
   audioChunks: [],
   audioBlob: null,
@@ -246,6 +261,22 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
           : {}
       )
     }, 5000)
+
+    return newNudge.id
+  },
+
+  updateNudgeText: (id, text) => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    set((state) => ({
+      nudges: state.nudges.map((nudge) =>
+        nudge.id === id ? { ...nudge, text: trimmed } : nudge
+      ),
+      currentNudge:
+        state.currentNudge?.id === id
+          ? { ...state.currentNudge, text: trimmed }
+          : state.currentNudge,
+    }))
   },
 
   clearCurrentNudge: () => set({ currentNudge: null }),
@@ -261,6 +292,26 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
       faceMetrics: { ...state.faceMetrics, ...metrics },
     }))
   },
+
+  setFacePhraseModelEnabled: (enabled) =>
+    set((state) => ({
+      facePhraseModelEnabled: enabled,
+      faceKeyframesEnabled: enabled ? state.faceKeyframesEnabled : false,
+    })),
+
+  setFaceKeyframesEnabled: (enabled) =>
+    set((state) => ({
+      faceKeyframesEnabled:
+        state.strictPrivacyMode || !state.facePhraseModelEnabled
+          ? false
+          : enabled,
+    })),
+
+  setStrictPrivacyMode: (enabled) =>
+    set((state) => ({
+      strictPrivacyMode: enabled,
+      faceKeyframesEnabled: enabled ? false : state.faceKeyframesEnabled,
+    })),
 
   addTranscriptSegment: (segment) => {
     const newSegment: TranscriptSegment = {

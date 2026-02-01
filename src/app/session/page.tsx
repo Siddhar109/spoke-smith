@@ -65,6 +65,12 @@ export default function SessionPage() {
     setTranscriptionError,
     postSessionTranscript,
     setPostSessionTranscript,
+    facePhraseModelEnabled,
+    faceKeyframesEnabled,
+    strictPrivacyMode,
+    setFacePhraseModelEnabled,
+    setFaceKeyframesEnabled,
+    setStrictPrivacyMode,
   } = useSessionStore()
 
   useEffect(() => {
@@ -664,6 +670,12 @@ export default function SessionPage() {
                     ? handleReset
                     : undefined
                 }
+                facePhraseModelEnabled={facePhraseModelEnabled}
+                faceKeyframesEnabled={faceKeyframesEnabled}
+                strictPrivacyMode={strictPrivacyMode}
+                onToggleFacePhraseModel={setFacePhraseModelEnabled}
+                onToggleFaceKeyframes={setFaceKeyframesEnabled}
+                onToggleStrictPrivacy={setStrictPrivacyMode}
                 audioDevices={audioDevices}
                 videoDevices={videoDevices}
                 selectedAudioDeviceId={audioDeviceId}
