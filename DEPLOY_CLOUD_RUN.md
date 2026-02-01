@@ -14,7 +14,8 @@ This repo is set up to deploy **two Cloud Run services** from the same GitHub re
    - **Build type**: `Dockerfile`
    - **Dockerfile directory**: repo root (where `Dockerfile` lives)
 5. Runtime configuration:
-   - Set env var `NEXT_PUBLIC_API_URL` to your backend URL (example: `https://YOUR-BACKEND-xxxx.a.run.app`)
+   - Set env var `BACKEND_API_URL` to your backend URL (example: `https://YOUR-BACKEND-xxxx.a.run.app`)
+   - Optional: set `NEXT_PUBLIC_API_URL` too (used only for `public/runtime-env.js` debugging; client requests go through same-origin `/api/*` proxy)
 
 Notes:
 - The container listens on `$PORT` (Cloud Run sets this; default is `8080`).

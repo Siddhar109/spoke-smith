@@ -20,6 +20,10 @@ export function getRuntimeEnv(): RuntimeEnv {
 }
 
 export function getApiBaseUrl(): string {
+  // In the browser, always use same-origin requests and rely on the Next.js
+  // `/api/*` proxy route to reach the backend. This avoids CORS in production.
+  if (typeof window !== 'undefined') return ''
+
   const runtimeEnv = getRuntimeEnv()
   return (
     runtimeEnv.NEXT_PUBLIC_API_URL ||
@@ -36,4 +40,3 @@ export function isFacePhraseModelEnabled(): boolean {
     ''
   return value.toLowerCase() === 'true'
 }
-
