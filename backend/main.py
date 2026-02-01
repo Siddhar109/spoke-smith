@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,13 +19,20 @@ app = FastAPI(
     version="1.0.0",
 )
 
+cors_allow_origins_env = os.getenv("CORS_ALLOW_ORIGINS")
+cors_allow_origins = (
+    [o.strip() for o in cors_allow_origins_env.split(",") if o.strip()]
+    if cors_allow_origins_env
+    else [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+)
+
 # CORS middleware for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

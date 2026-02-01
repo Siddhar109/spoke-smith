@@ -1,13 +1,6 @@
 import type { Metadata } from 'next'
-import { Outfit } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
-
-const outfit = Outfit({ 
-  subsets: ['latin'],
-  variable: '--font-outfit',
-  // Including thin weights as requested
-  weight: ['100', '200', '300', '400', '500', '600', '700'] 
-})
 
 export const metadata: Metadata = {
   title: 'Kawkai - AI Media Training Coach',
@@ -21,7 +14,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} font-sans antialiased`}>{children}</body>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-sans antialiased">
+        <Script src="/runtime-env.js" strategy="beforeInteractive" />
+        {children}
+      </body>
     </html>
   )
 }

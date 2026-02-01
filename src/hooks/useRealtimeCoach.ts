@@ -8,6 +8,7 @@ import {
 } from '@/lib/openai/realtimeClient'
 import { useSessionStore } from '@/stores/sessionStore'
 import { calculateMetrics, type WordTiming } from '@/lib/analysis/voiceMetrics'
+import { getApiBaseUrl } from '@/lib/runtimeEnv'
 
 interface UseRealtimeCoachReturn {
   connect: (audioTrack: MediaStreamTrack) => Promise<void>
@@ -18,7 +19,7 @@ interface UseRealtimeCoachReturn {
   error: Error | null
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = getApiBaseUrl()
 
 export function useRealtimeCoach(): UseRealtimeCoachReturn {
   const clientRef = useRef<RealtimeClient | null>(null)

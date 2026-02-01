@@ -12,8 +12,7 @@ import { VideoPreview } from '@/components/VideoPreview'
 import { LiveMeters } from '@/components/LiveMeters'
 import { LiveNudge } from '@/components/LiveNudge'
 import { Button } from '@/components/ui/button'
-import { Scenario } from '@/lib/scenarios/types'
-import type { CounterpartyId, SituationId } from '@/lib/scenarios/types'
+import type { Scenario, CounterpartyId, SituationId } from '@/lib/scenarios/types'
 import Link from 'next/link'
 import { uploadSession } from '@/lib/api/sessionApi'
 import { createCompanyBrief } from '@/lib/api/companyBriefApi'
@@ -738,9 +737,9 @@ export default function SessionPage() {
             {/* Q2: What's the situation */}
              <div className="group relative px-8 py-6 bg-white rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_12px_30px_rgba(0,0,0,0.05)] hover:-translate-y-1 flex flex-col justify-center">
                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                 <span className="text-xl font-light text-slate-800 tracking-tight">
-                   What's the situation
-                 </span>
+	                 <span className="text-xl font-light text-slate-800 tracking-tight">
+	                   What&apos;s the situation
+	                 </span>
                  <div className="relative inline-block">
                    <select
                      value={situation}
@@ -763,12 +762,11 @@ export default function SessionPage() {
           </div>
           {/* Scenario Selector */}
           <div className="bg-transparent">
-            <ScenarioSelector
-              onSelect={handleScenarioSelect}
-              counterparty={counterparty}
-              situation={situation}
-              selectedId={selectedScenario?.id ?? undefined}
-            />
+	            <ScenarioSelector
+	              onSelect={handleScenarioSelect}
+	              counterparty={counterparty}
+	              situation={situation}
+	            />
           </div>
         </div>
       </main>

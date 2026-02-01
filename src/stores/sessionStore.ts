@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { WordTiming } from '@/lib/analysis/voiceMetrics'
 import type { CounterpartyId, SituationId } from '@/lib/scenarios/types'
 import type { CompanyBriefSummary } from '@/lib/company/types'
+import { isFacePhraseModelEnabled } from '@/lib/runtimeEnv'
 
 export type SessionStatus = 'idle' | 'connecting' | 'recording' | 'paused' | 'completed'
 export type AnalysisStatus = 'idle' | 'uploading' | 'analyzing' | 'complete' | 'error'
@@ -224,7 +225,7 @@ const initialState: SessionState = {
     lastUpdated: null,
   },
   facePhraseModelEnabled:
-    process.env.NEXT_PUBLIC_FACE_PHRASE_MODEL_ENABLED === 'true',
+    isFacePhraseModelEnabled(),
   faceKeyframesEnabled: false,
   strictPrivacyMode: true,
   transcript: [],

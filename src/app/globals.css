@@ -4,6 +4,8 @@
 
 @layer base {
   :root {
+    --font-outfit: 'Outfit';
+
     /* Minimalist Light Theme Tokens */
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;

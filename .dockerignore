@@ -1,0 +1,14 @@
+.git
+.DS_Store
+node_modules
+.next
+npm-debug.log*
+yarn-error.log*
+
+# Backend is built/deployed separately
+backend
+
+# Local env files should not be baked into images
+.env
+.env.*
+

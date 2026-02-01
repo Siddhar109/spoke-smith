@@ -1,7 +1,8 @@
 import { AnalysisResult } from '@/stores/sessionStore'
 import type { WordTiming } from '@/lib/analysis/voiceMetrics'
+import { getApiBaseUrl } from '@/lib/runtimeEnv'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = getApiBaseUrl()
 
 export interface UploadSessionRequest {
   sessionId: string

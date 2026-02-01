@@ -14,7 +14,7 @@ export default function Home() {
                  <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/60 flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
                     <div className="w-4 h-4 bg-gradient-to-tr from-emerald-400 to-cyan-500 rounded-[4px]" />
                  </div>
-                 <span className="font-light text-xl tracking-tight text-slate-800">KAWKAI</span>
+                 <span className="font-light text-xl tracking-tight text-slate-800">Spoke Smith</span>
              </div>
         </nav>
 
