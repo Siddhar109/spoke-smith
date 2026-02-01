@@ -5,12 +5,12 @@ Add Spiky-style horizontal segmented progress bars for real-time coaching feedba
 
 ## Metrics to Implement (Phase 1)
 
-Using existing data from the voice metrics engine:
+Using existing data from the voice metrics engine (plus local audio analysis for prosody):
 
 | Metric | Source | Thresholds | Display |
 |--------|--------|------------|---------|
 | **Talking Speed** | WPM | <100 (slow), 100-130 (ok), 130-160 (ideal), 160-180 (fast), >180 (too fast) | Bi-directional bar (green center) |
-| **Answer Time** | Duration since last AI turn | 0-30s (good), 30-45s (warning), >45s (danger) | Left-to-right fill bar |
+| **Expressiveness (Prosody variance)** | Pitch (F0) variation, last ~5s | <1.2 st (monotone), 1.2-2.0 st (ok), 2.0-4.0 st (expressive), >5.5 st (wild/noisy) | Indicator bar (green center) |
 | **Filler Rate** | Fillers/min | 0-3 (good), 3-6 (warning), >6 (high) | Left-to-right fill bar |
 
 *Tone/Energy analysis deferred to future phase.*
@@ -25,9 +25,9 @@ Using existing data from the voice metrics engine:
 │  ▓▓▓▓░░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓●▓▓▓▓▓░░░░░░░░░░░▓▓▓▓▓▓    │
 │  too slow      ok      ideal       fast     too fast         │
 │                                                              │
-│  ANSWER TIME                                      00:32 WRAP │
-│  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓●░░░░░░░░░░░░░░░░░░░░░░    │
-│  0s             15s            30s        45s         60s    │
+│  EXPRESSIVENESS                                   EXPRESSIVE │
+│  ▓▓▓▓░░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓●▓▓▓▓▓░░░░░░░░░░░▓▓▓▓▓▓    │
+│  mono          ok      expressive        wild/noisy           │
 │                                                              │
 │  FILLER RATE                                         1.2/min │
 │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓●░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    │
@@ -55,7 +55,7 @@ Using existing data from the voice metrics engine:
 |------|---------|
 | [src/components/LiveMeters.tsx](src/components/LiveMeters.tsx) | Replace numeric display with stacked MetricBar components |
 | **src/components/ui/MetricBar.tsx** (new) | Reusable segmented bar with indicator |
-| [src/stores/sessionStore.ts](src/stores/sessionStore.ts) | Add `answerStartTime` for answer duration tracking |
+| [src/stores/sessionStore.ts](src/stores/sessionStore.ts) | Add `prosodyVariance` to `VoiceMetrics` |
 | [src/app/session/page.tsx](src/app/session/page.tsx) | Adjust layout for vertical metrics panel |
 
 ## Implementation Steps
@@ -82,16 +82,13 @@ interface MetricBarProps {
 ### Step 2: Update LiveMeters Component
 Replace current numeric display with vertical stack of 3 MetricBars:
 1. **Talking Speed (WPM)** - bidirectional, green in center (130-160), yellow edges, red extremes
-2. **Answer Time** - fills left to right, resets when AI speaks
+2. **Expressiveness (Prosody variance)** - indicator bar based on pitch variation (monotone → expressive)
 3. **Filler Rate** - fills left to right
 
 Keep REC indicator and total session duration.
 
-### Step 3: Add Answer Duration Tracking
-In `sessionStore.ts`:
-- Track `answerStartTime` (timestamp when user starts speaking after AI)
-- Calculate `currentAnswerDuration` = now - answerStartTime
-- Reset when AI response is received
+### Step 3: Add Expressiveness Tracking (Local)
+Compute a short-window pitch-variance score (in semitones) from the microphone stream and surface it as `metrics.prosodyVariance`.
 
 ### Step 4: Adjust Session Page Layout
 Position the vertical metrics panel in top-right corner as a floating overlay, or integrate into the existing header area.
@@ -99,7 +96,7 @@ Position the vertical metrics panel in top-right corner as a floating overlay, o
 ## Verification
 - [ ] Start a session and confirm all 3 bars appear
 - [ ] Speak and verify WPM indicator moves smoothly (green zone at ~140 WPM)
-- [ ] Verify answer time bar fills over time, resets after AI responds
+- [ ] Vary pitch/emphasis and verify expressiveness moves (monotone → expressive)
 - [ ] Say filler words ("um", "like") and confirm filler rate bar updates
 - [ ] Check bars appear in both Coach and Interview modes
 - [ ] Test responsive behavior on smaller screens

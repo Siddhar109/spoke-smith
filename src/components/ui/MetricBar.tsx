@@ -239,6 +239,47 @@ export function AnswerTimeBar({ seconds }: AnswerTimeBarProps) {
     )
 }
 
+export interface ProsodyVarianceBarProps {
+  prosodyVariance: number
+}
+
+export function ProsodyVarianceBar({ prosodyVariance }: ProsodyVarianceBarProps) {
+  let statusText = 'MONOTONE'
+  let statusColor: MetricBarProps['statusColor'] = 'red'
+
+  if (prosodyVariance >= 2.0 && prosodyVariance <= 4.0) {
+    statusText = 'EXPRESSIVE'
+    statusColor = 'green'
+  } else if (prosodyVariance >= 1.2) {
+    statusText = 'OK'
+    statusColor = 'yellow'
+  } else if (prosodyVariance > 0.2) {
+    statusText = 'FLAT'
+    statusColor = 'orange'
+  }
+
+  const segments: Segment[] = [
+    { start: 0, end: 1.2, color: 'red' },
+    { start: 1.2, end: 2.0, color: 'yellow' },
+    { start: 2.0, end: 4.0, color: 'green' },
+    { start: 4.0, end: 5.5, color: 'yellow' },
+    { start: 5.5, end: 8.0, color: 'orange' },
+  ]
+
+  return (
+    <MetricBar
+      label="Expressiveness"
+      value={prosodyVariance}
+      min={0}
+      max={8}
+      segments={segments}
+      statusText={statusText}
+      statusColor={statusColor}
+      axisZoneLabels={['Mono', '', 'Good', '', 'Wild']}
+    />
+  )
+}
+
 
 export interface ToneOfVoiceBarProps {
     fillerRate: number // Use filler rate as proxy for now

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
 import {
   TalkingSpeedBar,
-  AnswerTimeBar,
+  ProsodyVarianceBar,
   ToneOfVoiceBar,
   FacePresenceBar,
   FramingBar,
@@ -14,7 +14,7 @@ import { CallMomentum } from '@/components/ui/CallMomentum'
 import { formatDuration } from '@/lib/analysis/voiceMetrics'
 
 export function LiveMeters() {
-  const { metrics, startTime, status, answerStartTime, faceMetrics } = useSessionStore()
+  const { metrics, startTime, status, faceMetrics } = useSessionStore()
   const [elapsed, setElapsed] = useState(0)
 
   // Update elapsed time every second
@@ -34,11 +34,6 @@ export function LiveMeters() {
   if (status !== 'recording' && status !== 'connecting') {
     return null
   }
-
-  const answerDurationSeconds =
-    status === 'recording' && answerStartTime !== null
-      ? Math.max(0, Math.floor((Date.now() - answerStartTime) / 1000))
-      : 0
 
   // Synthetic Momentum Calculation
   let momentum = 75
@@ -85,7 +80,7 @@ export function LiveMeters() {
          {/* Individual Metric Bars */}
          <div className="space-y-4 relative z-10">
             <TalkingSpeedBar wpm={metrics.wpm} />
-            <AnswerTimeBar seconds={answerDurationSeconds} />
+            <ProsodyVarianceBar prosodyVariance={metrics.prosodyVariance} />
             <ToneOfVoiceBar fillerRate={metrics.fillerRate} />
          </div>
       </div>

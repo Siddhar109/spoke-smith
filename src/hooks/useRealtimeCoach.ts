@@ -8,6 +8,7 @@ import {
 } from '@/lib/openai/realtimeClient'
 import { useSessionStore } from '@/stores/sessionStore'
 import { calculateMetrics, type WordTiming } from '@/lib/analysis/voiceMetrics'
+import { createProsodyVarianceTracker } from '@/lib/analysis/prosody'
 import { getApiBaseUrl } from '@/lib/runtimeEnv'
 
 interface UseRealtimeCoachReturn {
@@ -23,6 +24,8 @@ const API_URL = getApiBaseUrl()
 
 export function useRealtimeCoach(): UseRealtimeCoachReturn {
   const clientRef = useRef<RealtimeClient | null>(null)
+  const prosodyTrackerRef = useRef<ReturnType<typeof createProsodyVarianceTracker> | null>(null)
+  const userSpeakingRef = useRef(false)
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>('disconnected')
   const [error, setError] = useState<Error | null>(null)
@@ -48,6 +51,10 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
 
   // Create client on mount
   useEffect(() => {
+    prosodyTrackerRef.current = createProsodyVarianceTracker((prosodyVariance) => {
+      updateMetrics({ prosodyVariance })
+    })
+
     clientRef.current = createRealtimeClient({
       onStatusChange: (status) => {
         setConnectionStatus(status)
@@ -59,21 +66,36 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
             setStatus('recording')
             setError(null)
             break
+          case 'disconnected':
+            userSpeakingRef.current = false
+            prosodyTrackerRef.current?.setActive(false)
+            void prosodyTrackerRef.current?.stop()
+            break
           case 'failed':
             setStatus('idle')
+            userSpeakingRef.current = false
+            prosodyTrackerRef.current?.setActive(false)
+            void prosodyTrackerRef.current?.stop()
             break
         }
       },
       onSpeechStart: () => {
+        userSpeakingRef.current = true
+        prosodyTrackerRef.current?.setActive(true)
         currentUtteranceTextRef.current = ''
         currentUtteranceWordCountRef.current = 0
         const { answerStartTime } = useSessionStore.getState()
         if (answerStartTime === null) setAnswerStartTime(Date.now())
       },
-      onSpeechStop: () => {},
+      onSpeechStop: () => {
+        userSpeakingRef.current = false
+        prosodyTrackerRef.current?.setActive(false)
+      },
       onAIResponseStart: () => {
         // Reset answer timer when AI starts audible output.
         setAnswerStartTime(null)
+        userSpeakingRef.current = false
+        prosodyTrackerRef.current?.setActive(false)
       },
       onAIResponseDone: () => {
         // AI finished responding, user can start their next answer
@@ -183,6 +205,8 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
 
     return () => {
       clientRef.current?.disconnect()
+      void prosodyTrackerRef.current?.stop()
+      prosodyTrackerRef.current = null
     }
   }, [
     setStatus,
@@ -199,7 +223,9 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
       currentUtteranceTextRef.current = ''
       currentUtteranceWordCountRef.current = 0
       setAnswerStartTime(null)
-      updateMetrics({ wpm: 0, fillerCount: 0, fillerRate: 0 })
+      updateMetrics({ wpm: 0, fillerCount: 0, fillerRate: 0, prosodyVariance: 0 })
+      userSpeakingRef.current = false
+      prosodyTrackerRef.current?.setActive(false)
 
       try {
         // Fetch ephemeral token from backend
@@ -230,6 +256,13 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
 
         // Connect to OpenAI Realtime
         await clientRef.current?.connect(client_secret, audioTrack, model)
+
+        // Start local-only prosody tracking (best-effort; failures shouldn't block the session).
+        try {
+          await prosodyTrackerRef.current?.start(audioTrack)
+        } catch (err) {
+          console.warn('[useRealtimeCoach] Prosody tracker failed to start:', err)
+        }
       } catch (err) {
         const error =
           err instanceof Error ? err : new Error('Failed to connect')
@@ -252,11 +285,12 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
 
   const disconnect = useCallback(() => {
     clientRef.current?.disconnect()
+    void prosodyTrackerRef.current?.stop()
     wordTimingsRef.current = []
     currentUtteranceTextRef.current = ''
     currentUtteranceWordCountRef.current = 0
     setAnswerStartTime(null)
-    updateMetrics({ wpm: 0, fillerCount: 0, fillerRate: 0 })
+    updateMetrics({ wpm: 0, fillerCount: 0, fillerRate: 0, prosodyVariance: 0 })
   }, [setAnswerStartTime, updateMetrics])
 
   return {

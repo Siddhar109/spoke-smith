@@ -67,6 +67,11 @@ export interface VoiceMetrics {
   wpm: number
   fillerCount: number
   fillerRate: number // fillers per minute (windowed)
+  /**
+   * Standard deviation of estimated pitch (F0) over a short recent window,
+   * expressed in semitones. Lower ~= more monotone.
+   */
+  prosodyVariance: number
 }
 
 export interface FaceMetrics {
@@ -224,7 +229,7 @@ const initialState: SessionState = {
   answerStartTime: null,
   nudges: [],
   currentNudge: null,
-  metrics: { wpm: 0, fillerCount: 0, fillerRate: 0 },
+  metrics: { wpm: 0, fillerCount: 0, fillerRate: 0, prosodyVariance: 0 },
   faceMetrics: {
     facePresent: 0,
     framing: 0,
