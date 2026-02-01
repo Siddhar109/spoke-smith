@@ -15,6 +15,7 @@ from api.realtime import router as realtime_router
 from api.company_brief import router as company_brief_router
 from api.sessions import router as sessions_router
 from api.face_nudge import router as face_nudge_router
+from api.scenario import router as scenario_router
 
 app = FastAPI(
     title="Kawkai API",
@@ -63,6 +64,7 @@ logger.info(
 # Include routers
 app.include_router(realtime_router, prefix="/api/realtime", tags=["realtime"])
 app.include_router(company_brief_router, prefix="/api", tags=["company"])
+app.include_router(scenario_router, prefix="/api", tags=["scenario"])
 app.include_router(sessions_router, prefix="/api/sessions", tags=["sessions"])
 app.include_router(face_nudge_router, prefix="/api/face", tags=["face"])
 

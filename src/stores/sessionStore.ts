@@ -3,7 +3,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { WordTiming } from '@/lib/analysis/voiceMetrics'
-import type { CounterpartyId, SituationId } from '@/lib/scenarios/types'
+import type { CounterpartyId, SituationId, Scenario } from '@/lib/scenarios/types'
 import type { CompanyBriefSummary } from '@/lib/company/types'
 import { isFacePhraseModelEnabled } from '@/lib/runtimeEnv'
 
@@ -135,6 +135,7 @@ interface SessionState {
 
   // Selected scenario
   scenarioId: string | null
+  scenarioOverride: Scenario | null
   mode: 'coach' | 'journalist'
   counterparty: CounterpartyId
   situation: SituationId
@@ -192,6 +193,7 @@ interface SessionActions {
 
   // Session config
   setScenario: (scenarioId: string | null) => void
+  setScenarioOverride: (scenario: Scenario | null) => void
   setMode: (mode: 'coach' | 'journalist') => void
   setCounterparty: (counterparty: CounterpartyId) => void
   setSituation: (situation: SituationId) => void
@@ -247,6 +249,7 @@ const initialState: SessionState = {
   audioChunks: [],
   audioBlob: null,
   scenarioId: null,
+  scenarioOverride: null,
   mode: 'coach',
   counterparty: 'journalist',
   situation: 'interview',
@@ -378,6 +381,8 @@ export const useSessionStore = create<SessionState & SessionActions>()(
       setAudioBlob: (blob) => set({ audioBlob: blob }),
 
       setScenario: (scenarioId) => set({ scenarioId }),
+
+      setScenarioOverride: (scenarioOverride) => set({ scenarioOverride }),
 
       setMode: (mode) => set({ mode }),
 

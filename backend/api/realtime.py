@@ -21,6 +21,7 @@ class TokenRequest(BaseModel):
     """Request model for token endpoint."""
     mode: str = "coach"  # "coach" or "journalist"
     scenario_id: str | None = None
+    scenario: dict | None = None
     counterparty: str | None = None
     situation: str | None = None
     company_url: str | None = None
@@ -52,7 +53,9 @@ async def create_ephemeral_token(request: TokenRequest = TokenRequest()):
         company_url=request.company_url,
         company_notes=request.company_notes,
         company_brief_summary=request.company_brief_summary,
+        scenario_override=request.scenario,
     )
+    tools = [NUDGE_TOOL] if request.mode == "coach" else []
 
     try:
         async with httpx.AsyncClient() as client:
@@ -66,7 +69,7 @@ async def create_ephemeral_token(request: TokenRequest = TokenRequest()):
                     "model": REALTIME_MODEL,
                     "voice": "alloy",
                     "instructions": system_prompt,
-                    "tools": [NUDGE_TOOL],
+                    "tools": tools,
                     "input_audio_transcription": {
                         "model": TRANSCRIPTION_MODEL,
                     },

@@ -43,6 +43,7 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
     companyUrl,
     companyNotes,
     companyBriefSummary,
+    scenarioOverride,
   } = useSessionStore()
 
   const wordTimingsRef = useRef<WordTiming[]>([])
@@ -237,6 +238,7 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
           body: JSON.stringify({
             mode,
             scenario_id: scenarioId,
+            scenario: scenarioOverride,
             counterparty,
             situation,
             company_url: companyUrl,
@@ -280,6 +282,7 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
       companyUrl,
       companyNotes,
       companyBriefSummary,
+      scenarioOverride,
       setAnswerStartTime,
       updateMetrics,
     ]

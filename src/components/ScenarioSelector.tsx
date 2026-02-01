@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { defaultScenarios } from '@/lib/scenarios/defaultScenarios'
 import {
   Scenario,
@@ -17,6 +18,8 @@ interface ScenarioSelectorProps {
   selectedId?: string
   counterparty?: CounterpartyId
   situation?: SituationId
+  canGenerateFromCompanyContext?: boolean
+  onGenerateFromCompanyContext?: () => Promise<Scenario>
 }
 
 export function ScenarioSelector({
@@ -24,7 +27,12 @@ export function ScenarioSelector({
   selectedId,
   counterparty,
   situation,
+  canGenerateFromCompanyContext,
+  onGenerateFromCompanyContext,
 }: ScenarioSelectorProps) {
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
+
   const scoredScenarios = defaultScenarios.map((scenario, index) => {
     const matchesSituation = Boolean(
       situation && scenario.recommendedForSituations?.includes(situation)
@@ -56,6 +64,58 @@ export function ScenarioSelector({
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
+      {/* Generate-from-context option */}
+      <div
+        className={cn(
+          'group relative p-8 bg-white rounded-[2rem] border transition-all duration-300',
+          canGenerateFromCompanyContext && onGenerateFromCompanyContext
+            ? 'cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.05)] hover:-translate-y-1 border-slate-100 hover:border-emerald-200/50'
+            : 'cursor-not-allowed opacity-70 border-slate-100'
+        )}
+        onClick={async () => {
+          if (!canGenerateFromCompanyContext || !onGenerateFromCompanyContext) return
+          if (isGenerating) return
+          setGenerateError(null)
+          setIsGenerating(true)
+          try {
+            const scenario = await onGenerateFromCompanyContext()
+            onSelect(scenario)
+          } catch (err) {
+            const message =
+              err instanceof Error ? err.message : 'Failed to generate scenario'
+            setGenerateError(message)
+          } finally {
+            setIsGenerating(false)
+          }
+        }}
+      >
+        <div className="mb-4 flex items-start justify-between">
+          <h3 className="text-xl font-light text-slate-800 tracking-tight group-hover:text-emerald-600 transition-colors">
+            {isGenerating ? 'Generating…' : 'Generate from company context'}
+          </h3>
+          <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border bg-emerald-50 text-emerald-700 border-emerald-100">
+            Custom
+          </span>
+        </div>
+
+        <p className="text-slate-500 font-light text-sm leading-relaxed mb-6">
+          {canGenerateFromCompanyContext
+            ? 'Create a tailored scenario and question set for your company.'
+            : 'Add company context to enable custom scenarios.'}
+        </p>
+
+        {generateError ? (
+          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {generateError}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between text-xs text-slate-400 font-medium tracking-wide uppercase border-t border-slate-50 pt-4">
+            <span>AI-generated</span>
+            <span className="text-emerald-500">{isGenerating ? '…' : '✓'}</span>
+          </div>
+        )}
+      </div>
+
       {recommended.map((scenario) => (
         <div
           key={scenario.id}

@@ -16,6 +16,7 @@ import type { Scenario, CounterpartyId, SituationId } from '@/lib/scenarios/type
 import Link from 'next/link'
 import { uploadSession } from '@/lib/api/sessionApi'
 import { createCompanyBrief } from '@/lib/api/companyBriefApi'
+import { generateScenario } from '@/lib/api/scenarioApi'
 import type { WordTiming } from '@/lib/analysis/voiceMetrics'
 import { formatDuration } from '@/lib/analysis/voiceMetrics'
 import { Timeline, type TimelineMarker } from '@/components/Timeline'
@@ -52,6 +53,7 @@ export default function SessionPage() {
     mode,
     setMode,
     setScenario,
+    setScenarioOverride,
     initSession,
     markStartTime,
     transcript,
@@ -245,9 +247,23 @@ export default function SessionPage() {
     (scenario: Scenario) => {
       setSelectedScenario(scenario)
       setScenario(scenario.id)
+      setScenarioOverride(scenario)
     },
-    [setScenario]
+    [setScenario, setScenarioOverride]
   )
+
+  const handleGenerateScenario = useCallback(async (): Promise<Scenario> => {
+    const response = await generateScenario({
+      company_url: companyUrl ?? undefined,
+      company_notes: companyNotes ?? undefined,
+      company_brief_summary: companyBriefSummary ?? undefined,
+      counterparty,
+      situation,
+      question_count: 3,
+    })
+
+    return response.scenario
+  }, [companyBriefSummary, companyNotes, companyUrl, counterparty, situation])
 
   const handleTranscribe = useCallback(async () => {
     if (!audioBlob || !sessionId) return
@@ -837,6 +853,8 @@ export default function SessionPage() {
 	              onSelect={handleScenarioSelect}
 	              counterparty={counterparty}
 	              situation={situation}
+	              canGenerateFromCompanyContext={hasCompanyContext}
+	              onGenerateFromCompanyContext={handleGenerateScenario}
 	            />
           </div>
         </div>
