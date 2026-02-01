@@ -123,6 +123,7 @@ async def generate_scenario(request: GenerateScenarioRequest):
         "facts (numbers, dates, customer names, contracts, incidents) unless explicitly present "
         "in the provided context. If specifics are unknown, use neutral placeholders like "
         "'[metric]' or ask a clarifying question in the scenario context. "
+        "Keep outputs concise and do not restate the entire company brief in `context`. "
         "Return ONLY valid JSON matching the required schema."
     )
 
@@ -148,6 +149,12 @@ Output requirements:
 - Questions should be realistic, specific to the company context, and cover likely pressure points.
 - Include 3–6 keyMessages the spokesperson should land.
 - Include 3–6 redLines (topics/claims to avoid).
+
+Conciseness constraints:
+- `description`: <= 30 words.
+- `context`: <= 120 words (summary only; no long rewrites of the inputs).
+- Each question `text`: <= 35 words.
+- Each followUp: <= 25 words.
 
 Return JSON only."""
 
@@ -208,24 +215,28 @@ Return JSON only."""
             {"role": "system", "content": [{"type": "input_text", "text": system_prompt}]},
             {"role": "user", "content": [{"type": "input_text", "text": user_prompt}]},
         ],
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {"name": "practice_scenario", "schema": schema, "strict": True},
+        "text": {
+            "verbosity": "low",
+            "format": {
+                "type": "json_schema",
+                "name": "practice_scenario",
+                "schema": schema,
+                "strict": True,
+            }
         },
+        "reasoning": {"effort": "low"},
+
         "max_output_tokens": max_output_tokens,
         "store": False,
     }
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                OPENAI_RESPONSES_URL,
-                headers={
-                    "Authorization": f"Bearer {openai_api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
+            headers = {
+                "Authorization": f"Bearer {openai_api_key}",
+                "Content-Type": "application/json",
+            }
+            response = await client.post(OPENAI_RESPONSES_URL, headers=headers, json=payload)
 
             if response.status_code != 200:
                 raise HTTPException(
@@ -235,7 +246,49 @@ Return JSON only."""
 
             data = response.json()
             if data.get("status") != "completed":
-                raise HTTPException(status_code=502, detail="OpenAI response incomplete.")
+                reason = None
+                details = data.get("incomplete_details")
+                if isinstance(details, dict):
+                    reason = details.get("reason")
+
+                if reason == "max_output_tokens":
+                    retry_max_output_tokens = min(3000, max_output_tokens * 2)
+                    retry_user_prompt = (
+                        user_prompt
+                        + "\nIf you are at risk of running out of tokens, shorten `context`, "
+                        "`description`, and followUps first."
+                    )
+
+                    retry_payload = dict(payload)
+                    retry_payload["max_output_tokens"] = retry_max_output_tokens
+                    retry_payload["input"] = [
+                        payload["input"][0],
+                        {"role": "user", "content": [{"type": "input_text", "text": retry_user_prompt}]},
+                    ]
+
+                    retry_response = await client.post(
+                        OPENAI_RESPONSES_URL,
+                        headers=headers,
+                        json=retry_payload,
+                    )
+
+                    if retry_response.status_code != 200:
+                        raise HTTPException(
+                            status_code=retry_response.status_code,
+                            detail=f"OpenAI API error: {retry_response.text}",
+                        )
+
+                    data = retry_response.json()
+
+                if data.get("status") != "completed":
+                    detail = "OpenAI response incomplete."
+                    if reason:
+                        detail = f"OpenAI response incomplete: {reason}."
+                    if reason == "max_output_tokens":
+                        detail += (
+                            " Increase OPENAI_SCENARIO_MAX_OUTPUT_TOKENS or reduce question_count."
+                        )
+                    raise HTTPException(status_code=502, detail=detail)
 
             json_payload = _extract_json_payload(data)
             if not json_payload:
@@ -256,4 +309,3 @@ Return JSON only."""
             status_code=503,
             detail=f"Failed to connect to OpenAI API: {str(exc)}",
         )
-

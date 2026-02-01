@@ -134,12 +134,12 @@ async def _call_responses_api(
             },
             {"role": "user", "content": user_content},
         ],
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {
+        "text": {
+            "format": {
+                "type": "json_schema",
                 "name": "face_nudge_response",
                 "schema": response_schema,
-            },
+            }
         },
         "temperature": 0.3,
         "max_output_tokens": 120,
