@@ -2,6 +2,10 @@
 
 **AI-powered media training coach** for high-stakes spokesperson moments (interviews, crisis comms, product launches).
 
+## 🔗 Demo
+
+- Product live demo: https://spoke-smith-87008435117.us-central1.run.app/
+- Demo video: https://www.loom.com/share/4c660e0fe125402a9a045dbfdf5b1518
 
 ---
 
