@@ -6,14 +6,19 @@ import { motion } from 'framer-motion'
 export interface CallMomentumProps {
   momentum: number // 0-100
   label?: string
+  isLive?: boolean
 }
 
-export function CallMomentum({ momentum, label = "CALL MOMENTUM" }: CallMomentumProps) {
+export function CallMomentum({
+  momentum,
+  label = "CALL MOMENTUM",
+  isLive = true,
+}: CallMomentumProps) {
   // Generate 20 bars for a denser "Equalizer" look
   const bars = Array.from({ length: 20 }, (_, i) => i)
   
   // Calculate threshold index based on momentum (0-20)
-  const activeIndex = Math.floor((momentum / 100) * 20)
+  const activeIndex = isLive ? Math.floor((momentum / 100) * 20) : -1
 
   // Neon gradients for the momentum bars
   const getBarColor = (index: number, isActive: boolean) => {
@@ -39,13 +44,21 @@ export function CallMomentum({ momentum, label = "CALL MOMENTUM" }: CallMomentum
         <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold text-shadow-sm">
           {label}
         </span>
-        {/* Animated pulse dot */}
         <div className="flex items-center gap-1.5">
-             <div className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-            </div>
-            <span className="text-[10px] font-bold text-green-400 tracking-wider">LIVE</span>
+          {isLive ? (
+            <>
+              <div className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </div>
+              <span className="text-[10px] font-bold text-green-400 tracking-wider">LIVE</span>
+            </>
+          ) : (
+            <>
+              <div className="relative inline-flex h-2 w-2 rounded-full bg-slate-500"></div>
+              <span className="text-[10px] font-bold text-slate-400 tracking-wider">READY</span>
+            </>
+          )}
         </div>
       </div>
       
@@ -71,21 +84,28 @@ export function CallMomentum({ momentum, label = "CALL MOMENTUM" }: CallMomentum
                             getBarColor(i, isActive)
                         )}
                         initial={{ opacity: 0.5, scaleY: 0.5 }}
-                        animate={{ 
-                            opacity: isActive ? 1 : 0.3, 
-                            height: isActive 
-                                ? `${40 + (Math.random() * 60)}%` // Dynamic "Audio" wave effect
-                                : "20%" 
-                        }}
-                        transition={{ 
-                            type: "spring", 
-                            stiffness: 300, 
-                            damping: 20,
-                            // Add some random variation to make it feel alive
-                            repeat: Infinity,
-                            repeatType: "reverse",
-                            duration: 0.5 + Math.random() * 0.5
-                        }}
+                        animate={
+                          isLive
+                            ? {
+                                opacity: isActive ? 1 : 0.3,
+                                height: isActive
+                                  ? `${40 + Math.random() * 60}%`
+                                  : '20%',
+                              }
+                            : { opacity: 0.25, height: '20%' }
+                        }
+                        transition={
+                          isLive
+                            ? {
+                                type: 'spring',
+                                stiffness: 300,
+                                damping: 20,
+                                repeat: Infinity,
+                                repeatType: 'reverse',
+                                duration: 0.5 + Math.random() * 0.5,
+                              }
+                            : { duration: 0.2 }
+                        }
                     />
                 )
             })}

@@ -12,7 +12,7 @@ function getBackendBaseUrl(): string | undefined {
 }
 
 function jsonError(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
+  return new Response(JSON.stringify({ detail: message, error: message }), {
     status,
     headers: { 'content-type': 'application/json' },
   })
@@ -52,12 +52,21 @@ async function proxy(request: NextRequest): Promise<Response> {
       ? undefined
       : await request.arrayBuffer()
 
-  const upstream = await fetch(targetUrl, {
-    method: request.method,
-    headers,
-    body,
-    redirect: 'manual',
-  })
+  let upstream: Response
+  try {
+    upstream = await fetch(targetUrl, {
+      method: request.method,
+      headers,
+      body,
+      redirect: 'manual',
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return jsonError(
+      502,
+      `Backend is unreachable (${backendBaseUrl}). Make sure the FastAPI server is running. (${message})`
+    )
+  }
 
   const responseHeaders = stripHopByHopHeaders(upstream.headers)
   return new Response(upstream.body, {
@@ -89,4 +98,3 @@ export async function DELETE(request: NextRequest): Promise<Response> {
 export async function OPTIONS(request: NextRequest): Promise<Response> {
   return proxy(request)
 }
-

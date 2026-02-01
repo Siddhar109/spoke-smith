@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
 import {
   TalkingSpeedBar,
+  AnswerTimeBar,
   ProsodyVarianceBar,
   ToneOfVoiceBar,
   FacePresenceBar,
@@ -14,12 +15,13 @@ import { CallMomentum } from '@/components/ui/CallMomentum'
 import { formatDuration } from '@/lib/analysis/voiceMetrics'
 
 export function LiveMeters() {
-  const { metrics, startTime, status, faceMetrics } = useSessionStore()
+  const { metrics, startTime, status, answerStartTime, faceMetrics } = useSessionStore()
   const [elapsed, setElapsed] = useState(0)
+  const isLive = status === 'recording' || status === 'connecting'
 
   // Update elapsed time every second
   useEffect(() => {
-    if (status !== 'recording' || !startTime) {
+    if (!isLive || !startTime) {
       setElapsed(0)
       return
     }
@@ -29,27 +31,31 @@ export function LiveMeters() {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [status, startTime])
+  }, [isLive, startTime])
 
-  if (status !== 'recording' && status !== 'connecting') {
-    return null
-  }
+  const answerDurationSeconds =
+    status === 'recording' && answerStartTime !== null
+      ? Math.max(0, Math.floor((Date.now() - answerStartTime) / 1000))
+      : 0
 
   // Synthetic Momentum Calculation
-  let momentum = 75
-  if (metrics.wpm >= 130 && metrics.wpm <= 160) {
-    momentum += 15
-  } else if (metrics.wpm < 100 || metrics.wpm > 200) {
-    momentum -= 15
+  let momentum = 0
+  if (isLive) {
+    momentum = 75
+    if (metrics.wpm >= 130 && metrics.wpm <= 160) {
+      momentum += 15
+    } else if (metrics.wpm < 100 || metrics.wpm > 200) {
+      momentum -= 15
+    }
+    if (metrics.fillerRate > 5) {
+      momentum -= 20
+    }
+    momentum = Math.max(0, Math.min(100, momentum))
   }
-  if (metrics.fillerRate > 5) {
-    momentum -= 20
-  }
-  momentum = Math.max(0, Math.min(100, momentum))
 
 
   return (
-    <div className="w-full sm:w-80 space-y-4 font-sans text-slate-200">
+    <div className="w-full space-y-4 font-sans text-slate-200">
        
       {/* Metrics Bars Group */}
       <div className="relative p-6 bg-slate-900/60 rounded-xl backdrop-blur-md border border-white/10 shadow-2xl space-y-5 overflow-hidden group">
@@ -62,12 +68,16 @@ export function LiveMeters() {
          {/* Header */}
          <div className="flex items-center justify-between relative z-10 mb-2">
            <div className="flex items-center gap-2">
-             <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
-             </span>
+             {isLive ? (
+               <span className="relative flex h-2.5 w-2.5">
+                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
+               </span>
+             ) : (
+               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-500 shadow-[0_0_6px_rgba(100,116,139,0.35)]"></span>
+             )}
              <span className="text-[10px] text-slate-300 uppercase tracking-widest font-bold drop-shadow-sm">
-               Live Analysis
+               {isLive ? 'Live Analysis' : 'Live Metrics'}
              </span>
            </div>
            <div className="px-2 py-0.5 rounded bg-slate-800/50 border border-white/5 backdrop-blur-sm">
@@ -77,16 +87,23 @@ export function LiveMeters() {
            </div>
          </div>
 
+         {!isLive && (
+           <div className="relative z-10 rounded-lg border border-white/10 bg-slate-900/40 px-3 py-2 text-xs text-slate-300">
+             Start the session to begin live analysis.
+           </div>
+         )}
+
          {/* Individual Metric Bars */}
          <div className="space-y-4 relative z-10">
             <TalkingSpeedBar wpm={metrics.wpm} />
             <ProsodyVarianceBar prosodyVariance={metrics.prosodyVariance} />
+            <AnswerTimeBar seconds={answerDurationSeconds} />
             <ToneOfVoiceBar fillerRate={metrics.fillerRate} />
          </div>
       </div>
 
       {/* Call Momentum */}
-      <CallMomentum momentum={momentum} />
+      <CallMomentum momentum={momentum} isLive={isLive} />
 
       {/* Face Metrics */}
       <div className="relative p-5 bg-slate-900/55 rounded-xl backdrop-blur-md border border-white/10 shadow-2xl space-y-4 overflow-hidden">

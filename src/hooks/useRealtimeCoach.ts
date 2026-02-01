@@ -246,9 +246,11 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
         })
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
+          const errorData = await response.json().catch(() => ({} as any))
           throw new Error(
-            errorData.detail || `Failed to get ephemeral token: ${response.status}`
+            errorData.detail ||
+              errorData.error ||
+              `Failed to get ephemeral token: ${response.status}`
           )
         }
 

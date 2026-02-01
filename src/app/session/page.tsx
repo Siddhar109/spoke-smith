@@ -7,7 +7,7 @@ import { useRealtimeCoach } from '@/hooks/useRealtimeCoach'
 import { useFaceCoach } from '@/hooks/useFaceCoach'
 import { useSessionStore } from '@/stores/sessionStore'
 import { ScenarioSelector } from '@/components/ScenarioSelector'
-import { SessionControls } from '@/components/SessionControls'
+import { SessionSettingsModal } from '@/components/SessionSettingsModal'
 import { VideoPreview } from '@/components/VideoPreview'
 import { LiveMeters } from '@/components/LiveMeters'
 import { LiveNudge } from '@/components/LiveNudge'
@@ -29,6 +29,7 @@ export default function SessionPage() {
   const [videoDeviceId, setVideoDeviceId] = useState<string | null>(null)
   const [audioDurationSeconds, setAudioDurationSeconds] = useState<number>(0)
   const [audioCurrentSeconds, setAudioCurrentSeconds] = useState<number>(0)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const {
@@ -98,6 +99,8 @@ export default function SessionPage() {
   const [hardLimitHit, setHardLimitHit] = useState(false)
   const hasCompanyContext =
     Boolean(companyUrl) || Boolean(companyNotes) || Boolean(companyBriefSummary)
+  // Show the Live Metrics panel as soon as a scenario is selected (even before recording starts).
+  const showLiveMeters = selectedScenario !== null
 
   const hardLimitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const stopSessionInFlightRef = useRef<Promise<void> | null>(null)
@@ -223,6 +226,10 @@ export default function SessionPage() {
     stopCapture,
     stopSession,
   ])
+
+  const handleStop = useCallback(async () => {
+    await stopSession('manual')
+  }, [stopSession])
 
   const handleReset = useCallback(() => {
     setAudioUrl(null)
@@ -848,303 +855,351 @@ export default function SessionPage() {
 
       {companyContextViewModal}
 
+      {/* Settings Modal */}
+      <SessionSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        facePhraseModelEnabled={facePhraseModelEnabled}
+        faceKeyframesEnabled={faceKeyframesEnabled}
+        strictPrivacyMode={strictPrivacyMode}
+        onToggleFacePhraseModel={setFacePhraseModelEnabled}
+        onToggleFaceKeyframes={setFaceKeyframesEnabled}
+        onToggleStrictPrivacy={setStrictPrivacyMode}
+        audioDevices={audioDevices}
+        videoDevices={videoDevices}
+        selectedAudioDeviceId={audioDeviceId}
+        selectedVideoDeviceId={videoDeviceId}
+        onSelectAudioDeviceId={setAudioDeviceId}
+        onSelectVideoDeviceId={setVideoDeviceId}
+        onRefreshDevices={refreshDevices}
+      />
+
       <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <button
-              onClick={handleReset}
-              className="group inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors text-sm mb-4 font-medium"
-              disabled={isConnected || isConnecting}
-            >
-              <span className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                ←
-              </span>
-              Change Scenario
-            </button>
-            <h1 className="text-3xl font-light text-slate-900 tracking-tight">
-              {selectedScenario?.name ?? 'Practice Session'}
-            </h1>
-            <p className="text-slate-500 mt-2 font-light text-lg">{selectedScenario?.description}</p>
-          </div>
-          
-          {/* Status Badge */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsCompanyContextOpen(true)}
-              className="h-9 w-9 rounded-full border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:border-slate-300 transition flex items-center justify-center shadow-sm"
-              aria-label="View company context"
-            >
-              <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current">
-                <path d="M10 1.5a8.5 8.5 0 100 17 8.5 8.5 0 000-17zm0 2a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 2.75a1 1 0 100 2 1 1 0 000-2zm-1 4h2v5h-2v-5z" />
-              </svg>
-            </button>
-            <div className={`px-4 py-2 rounded-full border backdrop-blur-sm shadow-sm flex items-center gap-2 ${
-              status === 'recording' || isConnected
-                ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
-                : 'bg-white border-slate-200 text-slate-600'
-            }`}>
-               <div className={`w-2 h-2 rounded-full ${status === 'recording' || isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-               <span className="text-xs font-bold uppercase tracking-widest">
-                 {status === 'recording' || isConnected ? 'Session Active' : 'Ready'}
-               </span>
+        {/* Main two-column layout - LiveMeters starts from top */}
+        <div
+          className={`grid grid-cols-1 gap-6 ${
+            showLiveMeters ? 'lg:grid-cols-[1fr_22rem]' : ''
+          }`}
+        >
+          {/* Left Column: Header + Content */}
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div>
+                <button
+                  onClick={handleReset}
+                  className="group inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors text-sm mb-4 font-medium"
+                  disabled={isConnected || isConnecting}
+                >
+                  <span className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    ←
+                  </span>
+                  Change Scenario
+                </button>
+                <h1 className="text-3xl font-light text-slate-900 tracking-tight">
+                  {selectedScenario?.name ?? 'Practice Session'}
+                </h1>
+                <p className="text-slate-500 mt-2 font-light text-lg">{selectedScenario?.description}</p>
+              </div>
+
+              {/* Header Actions */}
+              <div className="flex items-center gap-3">
+                {/* Settings Gear */}
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="h-9 w-9 rounded-full border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:border-slate-300 transition flex items-center justify-center shadow-sm"
+                  aria-label="Session settings"
+                >
+                  <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current">
+                    <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                  </svg>
+                </button>
+
+                {/* Company Context */}
+                <button
+                  onClick={() => setIsCompanyContextOpen(true)}
+                  className="h-9 w-9 rounded-full border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:border-slate-300 transition flex items-center justify-center shadow-sm"
+                  aria-label="View company context"
+                >
+                  <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current">
+                    <path d="M10 1.5a8.5 8.5 0 100 17 8.5 8.5 0 000-17zm0 2a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 2.75a1 1 0 100 2 1 1 0 000-2zm-1 4h2v5h-2v-5z" />
+                  </svg>
+                </button>
+
+                {/* Status Badge */}
+                <div className={`px-4 py-2 rounded-full border backdrop-blur-sm shadow-sm flex items-center gap-2 ${
+                  status === 'recording' || isConnected
+                    ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                    : 'bg-white border-slate-200 text-slate-600'
+                }`}>
+                   <div className={`w-2 h-2 rounded-full ${status === 'recording' || isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                   <span className="text-xs font-bold uppercase tracking-widest">
+                     {status === 'recording' || isConnected ? 'Live' : 'Ready'}
+                   </span>
+                </div>
+
+                {/* Start / End Session Button */}
+                {!isConnected && !isConnecting && (
+                  <Button
+                    onClick={handleStart}
+                    className="bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-full px-6 shadow-lg hover:shadow-xl transition-all"
+                  >
+                    <span className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                      Start Session
+                    </span>
+                  </Button>
+                )}
+                {isConnecting && (
+                  <Button
+                    disabled
+                    className="bg-slate-100 text-slate-500 border border-slate-200 rounded-full px-6"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-xs font-bold uppercase tracking-wide">Connecting...</span>
+                    </div>
+                  </Button>
+                )}
+                {isConnected && (
+                  <Button
+                    onClick={handleStop}
+                    className="bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-full px-6 shadow-sm hover:shadow-md transition-all"
+                  >
+                    <span className="flex items-center gap-2 font-bold tracking-wide text-xs uppercase">
+                      <div className="w-2 h-2 rounded-sm bg-red-500 animate-pulse" />
+                      End Session
+                    </span>
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Error display */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 shadow-sm animate-fade-in">
-            <p className="font-medium flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              Connection Error
-            </p>
-            <p className="text-sm mt-1 pl-3.5 slate-500">{error.message}</p>
-          </div>
-        )}
+            {/* Error display */}
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 shadow-sm animate-fade-in">
+                <p className="font-medium flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  Connection Error
+                </p>
+                <p className="text-sm mt-1 pl-3.5 slate-500">{error.message}</p>
+              </div>
+            )}
 
-        {/* Live Meters (in-flow on mobile, floating on desktop) */}
-        <div className="z-40 lg:fixed lg:top-4 lg:right-4 lg:pointer-events-none">
-          <div className="lg:pointer-events-auto">
-            <LiveMeters />
-          </div>
-        </div>
+            {hardLimitHit && !isConnected && !isConnecting && (
+              <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-amber-800 shadow-sm animate-fade-in">
+                Session auto-ended after 5 minutes. You can start a new one anytime.
+              </div>
+            )}
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Video Preview */}
-          <div className="lg:col-span-2 space-y-6">
+            {/* Video Preview */}
             <div className="relative group rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-200/50 bg-white">
-               <VideoPreview stream={stream} className="aspect-video w-full" />
+              <VideoPreview stream={stream} className="aspect-video w-full" />
             </div>
 
             {/* Mode indicator */}
             <div className="flex items-center justify-between px-1">
-               <div className="flex items-center gap-3">
-                  <span
-                    className={`px-3 py-1.5 text-xs font-bold tracking-widest uppercase rounded-lg border ${
-                      mode === 'coach'
-                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                        : 'bg-purple-50 text-purple-600 border-purple-100'
-                    }`}
-                  >
-                    {mode === 'coach' ? 'Coach Mode' : 'Interview Mode'}
-                  </span>
-                  <span className="text-sm text-slate-500 font-light">
-                    {mode === 'coach'
-                      ? 'AI provides coaching feedback as you speak'
-                      : 'AI will ask you interview questions'}
-                  </span>
-               </div>
+              <div className="flex items-center gap-3">
+                <span
+                  className={`px-3 py-1.5 text-xs font-bold tracking-widest uppercase rounded-lg border ${
+                    mode === 'coach'
+                      ? 'bg-blue-50 text-blue-600 border-blue-100'
+                      : 'bg-purple-50 text-purple-600 border-purple-100'
+                  }`}
+                >
+                  {mode === 'coach' ? 'Coach Mode' : 'Interview Mode'}
+                </span>
+                <span className="text-sm text-slate-500 font-light">
+                  {mode === 'coach'
+                    ? 'AI provides coaching feedback as you speak'
+                    : 'AI will ask you interview questions'}
+                </span>
+              </div>
             </div>
 
-            {/* Post-session playback */}
-            {status === 'completed' && audioUrl && (
-              <div className="p-6 bg-white rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] animate-fade-in">
-                <h3 className="font-light text-xl text-slate-800 mb-4 flex items-center gap-2">
-                  Session Recording
-                </h3>
-                <audio
-                  ref={audioRef}
-                  controls
-                  src={audioUrl}
-                  className="w-full mt-2"
-                  onLoadedMetadata={() => {
-                    const el = audioRef.current
-                    if (!el || !Number.isFinite(el.duration)) return
-                    setAudioDurationSeconds(el.duration)
-                  }}
-                  onTimeUpdate={() => {
-                    const el = audioRef.current
-                    if (!el) return
-                    setAudioCurrentSeconds(el.currentTime || 0)
-                  }}
-                />
-
-                {audioDurationSeconds > 0 && timelineMarkers.length > 0 && (
-                  <div className="mt-8">
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-sm text-slate-500">
-                        Analysis Events: <span className="text-slate-900 font-medium">{timelineMarkers.length}</span>
-                      </p>
-                      <p className="text-sm text-slate-500 tabular-nums">
-                        {formatDuration(Math.floor(audioCurrentSeconds))} / {formatDuration(Math.floor(audioDurationSeconds))}
-                      </p>
-                    </div>
-                    <Timeline
-                      durationSeconds={audioDurationSeconds}
-                      currentSeconds={audioCurrentSeconds}
-                      markers={timelineMarkers}
-                      onSeek={handleSeek}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Transcript preview */}
-            {status === 'completed' && transcript.length > 0 && (
-              <div className="p-6 bg-white rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] animate-fade-in">
-                <h3 className="font-light text-xl text-slate-800 mb-4">
-                  Transcript (Realtime)
-                </h3>
-                <div className="mt-4 max-h-64 overflow-auto space-y-3 pr-2">
-                  {transcript.slice(-20).map((seg) => (
-                    <div key={seg.id} className="text-sm text-slate-600 leading-relaxed">
-                      <span className={`inline-block w-8 font-bold mr-2 ${seg.speaker === 'user' ? 'text-blue-500' : 'text-purple-500'}`}>
-                        {seg.speaker === 'user' ? 'YOU' : 'AI'}
-                      </span>
-                      <span className="text-slate-600 font-light">{seg.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Post-session transcription */}
-            {status === 'completed' && audioBlob && (
-              <div className="p-6 bg-white rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] animate-fade-in">
-                <div className="flex items-center justify-between gap-4 mb-6">
-                  <div>
-                    <h3 className="font-light text-xl text-slate-800">
-                      Full Analysis
-                    </h3>
-                    <p className="text-sm text-slate-400 font-light mt-1">
-                      Generate word-level timestamps and deeper insights
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleTranscribe}
-                    disabled={
-                      transcriptionStatus === 'uploading' ||
-                      transcriptionStatus === 'transcribing'
-                    }
-                    className="bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-200/50 hover:bg-slate-800 hover:shadow-xl transition-all"
-                  >
-                    {transcriptionStatus === 'uploading' ||
-                    transcriptionStatus === 'transcribing'
-                      ? 'Processing...'
-                      : 'Start Analysis'}
-                  </Button>
-                </div>
-
-                {transcriptionError && (
-                  <p className="mt-3 text-sm text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">
-                    {transcriptionError}
-                  </p>
-                )}
-
-                {timestampedLines.length > 0 && (
-                  <div className="mt-4 max-h-80 overflow-auto space-y-1">
-                    {timestampedLines.slice(0, 120).map((line, idx) => (
-                      <div key={idx} className="text-sm group hover:bg-slate-50 p-2 rounded-lg transition-colors flex gap-4">
-                        <span className="text-slate-400 font-mono text-xs pt-1 tabular-nums">
-                          {formatDuration(Math.floor(line.start))}
-                        </span>
-                        <span className="text-slate-600 font-light leading-relaxed">{line.text}</span>
-                      </div>
+            {/* Talking Points & Tips - 2 column layout below video */}
+          {(selectedScenario || status === 'idle' || status === 'recording') && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Key Messages */}
+              {selectedScenario && selectedScenario.keyMessages.length > 0 && (
+                <div className="p-5 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 shadow-sm">
+                  <h3 className="font-bold mb-3 text-xs uppercase tracking-widest text-emerald-700">
+                    Key Talking Points
+                  </h3>
+                  <ul className="text-sm text-slate-700 space-y-2">
+                    {selectedScenario.keyMessages.map((msg, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                        <span className="leading-relaxed font-light">{msg}</span>
+                      </li>
                     ))}
-                  </div>
-                )}
-                
-                {timestampedLines.length === 0 && plainTranscriptText.length > 0 && (
-                  <div className="mt-4 max-h-64 overflow-auto space-y-2">
-                    <p className="text-xs text-slate-500">
-                      No word timings returned — showing plain transcript.
-                    </p>
-                    <p className="text-sm text-slate-400 whitespace-pre-wrap">
-                      {plainTranscriptText}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                  </ul>
+                </div>
+              )}
 
-          {/* Controls & Info Panel */}
-          <div className="space-y-6">
-            {/* Session Controls */}
-            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] sticky top-6">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">
-                  Session Control
+              {/* Red Lines */}
+              {selectedScenario && selectedScenario.redLines.length > 0 && (
+                <div className="p-5 bg-red-50/50 rounded-2xl border border-red-100/50 shadow-sm">
+                  <h3 className="font-bold mb-3 text-xs uppercase tracking-widest text-red-700">
+                    Topics to Avoid
+                  </h3>
+                  <ul className="text-sm text-slate-700 space-y-2">
+                    {selectedScenario.redLines.map((line, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                        <span className="leading-relaxed font-light">{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Tips */}
+              <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100/50 shadow-sm">
+                <h3 className="font-bold mb-3 text-xs uppercase tracking-widest text-blue-700">
+                  Pro Tips
                 </h3>
-                {hardLimitHit && !isConnected && !isConnecting && (
-                  <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-                    Session auto-ended after 5 minutes. You can start a new one anytime.
-                  </div>
-                )}
-                <SessionControls
-                isConnected={isConnected}
-                isConnecting={isConnecting}
-                onStart={handleStart}
-                onStop={stopSession}
-                onReset={
-                    status !== 'recording' && status !== 'connecting'
-                    ? handleReset
-                    : undefined
-                }
-                facePhraseModelEnabled={facePhraseModelEnabled}
-                faceKeyframesEnabled={faceKeyframesEnabled}
-                strictPrivacyMode={strictPrivacyMode}
-                onToggleFacePhraseModel={setFacePhraseModelEnabled}
-                onToggleFaceKeyframes={setFaceKeyframesEnabled}
-                onToggleStrictPrivacy={setStrictPrivacyMode}
-                audioDevices={audioDevices}
-                videoDevices={videoDevices}
-                selectedAudioDeviceId={audioDeviceId}
-                selectedVideoDeviceId={videoDeviceId}
-                onSelectAudioDeviceId={setAudioDeviceId}
-                onSelectVideoDeviceId={setVideoDeviceId}
-                onRefreshDevices={refreshDevices}
-                />
+                <ul className="text-sm text-slate-600 space-y-1.5 font-light">
+                  <li className="flex gap-2"><span className="text-blue-400">•</span> Speak at 130-160 WPM</li>
+                  <li className="flex gap-2"><span className="text-blue-400">•</span> Minimize filler words</li>
+                  <li className="flex gap-2"><span className="text-blue-400">•</span> Brief, direct answers</li>
+                </ul>
+              </div>
             </div>
+          )}
 
-            {/* Key Messages */}
-            {selectedScenario && selectedScenario.keyMessages.length > 0 && (
-              <div className="p-6 bg-emerald-50/50 rounded-[2rem] border border-emerald-100/50 shadow-sm animate-fade-in">
-                <h3 className="font-bold mb-4 text-xs uppercase tracking-widest text-emerald-700">
-                  Key Talking Points
-                </h3>
-                <ul className="text-sm text-slate-700 space-y-3">
-                  {selectedScenario.keyMessages.map((msg, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
-                      <span className="leading-relaxed font-light">{msg}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Red Lines */}
-            {selectedScenario && selectedScenario.redLines.length > 0 && (
-              <div className="p-6 bg-red-50/50 rounded-[2rem] border border-red-100/50 shadow-sm animate-fade-in">
-                <h3 className="font-bold mb-4 text-xs uppercase tracking-widest text-red-700">
-                  Topics to Avoid
-                </h3>
-                <ul className="text-sm text-slate-700 space-y-3">
-                  {selectedScenario.redLines.map((line, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0" />
-                      <span className="leading-relaxed font-light">{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-             {/* Tips */}
-             <div className="p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100/50 shadow-sm">
-              <h3 className="font-bold mb-4 text-xs uppercase tracking-widest text-blue-700">
-                Pro Tips
+          {/* Post-session playback */}
+          {status === 'completed' && audioUrl && (
+            <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] animate-fade-in">
+              <h3 className="font-light text-xl text-slate-800 mb-4 flex items-center gap-2">
+                Session Recording
               </h3>
-              <ul className="text-sm text-slate-600 space-y-2 font-light">
-                <li className="flex gap-2"><span className="text-blue-400">•</span> Speak at 130-160 WPM</li>
-                <li className="flex gap-2"><span className="text-blue-400">•</span> Minimize filler words</li>
-                <li className="flex gap-2"><span className="text-blue-400">•</span> Brief, direct answers</li>
-              </ul>
+              <audio
+                ref={audioRef}
+                controls
+                src={audioUrl}
+                className="w-full mt-2"
+                onLoadedMetadata={() => {
+                  const el = audioRef.current
+                  if (!el || !Number.isFinite(el.duration)) return
+                  setAudioDurationSeconds(el.duration)
+                }}
+                onTimeUpdate={() => {
+                  const el = audioRef.current
+                  if (!el) return
+                  setAudioCurrentSeconds(el.currentTime || 0)
+                }}
+              />
+
+              {audioDurationSeconds > 0 && timelineMarkers.length > 0 && (
+                <div className="mt-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-slate-500">
+                      Analysis Events: <span className="text-slate-900 font-medium">{timelineMarkers.length}</span>
+                    </p>
+                    <p className="text-sm text-slate-500 tabular-nums">
+                      {formatDuration(Math.floor(audioCurrentSeconds))} / {formatDuration(Math.floor(audioDurationSeconds))}
+                    </p>
+                  </div>
+                  <Timeline
+                    durationSeconds={audioDurationSeconds}
+                    currentSeconds={audioCurrentSeconds}
+                    markers={timelineMarkers}
+                    onSeek={handleSeek}
+                  />
+                </div>
+              )}
             </div>
+          )}
+
+          {/* Transcript preview */}
+          {status === 'completed' && transcript.length > 0 && (
+            <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] animate-fade-in">
+              <h3 className="font-light text-xl text-slate-800 mb-4">
+                Transcript (Realtime)
+              </h3>
+              <div className="mt-4 max-h-64 overflow-auto space-y-3 pr-2">
+                {transcript.slice(-20).map((seg) => (
+                  <div key={seg.id} className="text-sm text-slate-600 leading-relaxed">
+                    <span className={`inline-block w-8 font-bold mr-2 ${seg.speaker === 'user' ? 'text-blue-500' : 'text-purple-500'}`}>
+                      {seg.speaker === 'user' ? 'YOU' : 'AI'}
+                    </span>
+                    <span className="text-slate-600 font-light">{seg.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Post-session transcription */}
+          {status === 'completed' && audioBlob && (
+            <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] animate-fade-in">
+              <div className="flex items-center justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="font-light text-xl text-slate-800">
+                    Full Analysis
+                  </h3>
+                  <p className="text-sm text-slate-400 font-light mt-1">
+                    Generate word-level timestamps and deeper insights
+                  </p>
+                </div>
+                <Button
+                  onClick={handleTranscribe}
+                  disabled={
+                    transcriptionStatus === 'uploading' ||
+                    transcriptionStatus === 'transcribing'
+                  }
+                  className="bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-200/50 hover:bg-slate-800 hover:shadow-xl transition-all"
+                >
+                  {transcriptionStatus === 'uploading' ||
+                  transcriptionStatus === 'transcribing'
+                    ? 'Processing...'
+                    : 'Start Analysis'}
+                </Button>
+              </div>
+
+              {transcriptionError && (
+                <p className="mt-3 text-sm text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">
+                  {transcriptionError}
+                </p>
+              )}
+
+              {timestampedLines.length > 0 && (
+                <div className="mt-4 max-h-80 overflow-auto space-y-1">
+                  {timestampedLines.slice(0, 120).map((line, idx) => (
+                    <div key={idx} className="text-sm group hover:bg-slate-50 p-2 rounded-lg transition-colors flex gap-4">
+                      <span className="text-slate-400 font-mono text-xs pt-1 tabular-nums">
+                        {formatDuration(Math.floor(line.start))}
+                      </span>
+                      <span className="text-slate-600 font-light leading-relaxed">{line.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {timestampedLines.length === 0 && plainTranscriptText.length > 0 && (
+                <div className="mt-4 max-h-64 overflow-auto space-y-2">
+                  <p className="text-xs text-slate-500">
+                    No word timings returned — showing plain transcript.
+                  </p>
+                  <p className="text-sm text-slate-400 whitespace-pre-wrap">
+                    {plainTranscriptText}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
           </div>
+
+          {/* Right Column: LiveMeters (full height from top) */}
+          {showLiveMeters && (
+            <div className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto scrollbar-thin">
+              <LiveMeters />
+            </div>
+          )}
         </div>
       </div>
     </main>
