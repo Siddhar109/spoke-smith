@@ -402,7 +402,25 @@ export const useSessionStore = create<SessionState & SessionActions>()(
 
       initSession: () => {
         const sessionId = crypto.randomUUID()
-        set({ sessionId })
+        set(() => ({
+          sessionId,
+          status: 'idle',
+          startTime: null,
+          answerStartTime: null,
+          nudges: [],
+          currentNudge: null,
+          metrics: { ...initialState.metrics },
+          faceMetrics: { ...initialState.faceMetrics },
+          transcript: [],
+          audioChunks: [],
+          audioBlob: null,
+          analysisStatus: 'idle',
+          analysis: null,
+          analysisError: null,
+          transcriptionStatus: 'idle',
+          transcriptionError: null,
+          postSessionTranscript: null,
+        }))
         return sessionId
       },
 

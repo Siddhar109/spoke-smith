@@ -11,6 +11,7 @@ import { SessionSettingsModal } from '@/components/SessionSettingsModal'
 import { VideoPreview } from '@/components/VideoPreview'
 import { LiveMeters } from '@/components/LiveMeters'
 import { LiveNudge } from '@/components/LiveNudge'
+import { NudgeMarquee } from '@/components/NudgeMarquee'
 import { Button } from '@/components/ui/button'
 import type { Scenario, CounterpartyId, SituationId } from '@/lib/scenarios/types'
 import Link from 'next/link'
@@ -1016,6 +1017,7 @@ export default function SessionPage() {
             {/* Video Preview */}
             <div className="relative group rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-200/50 bg-white">
               <VideoPreview stream={stream} className="aspect-video w-full" />
+              <NudgeMarquee />
             </div>
 
             {/* Mode indicator */}
