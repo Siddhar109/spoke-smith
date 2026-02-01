@@ -36,7 +36,7 @@ export function CallMomentum({
   }
   
   return (
-    <div className="space-y-3 p-5 bg-slate-900/60 rounded-xl border border-white/10 backdrop-blur-md shadow-xl relative overflow-hidden group">
+    <div className="space-y-3 p-5 bg-slate-900/90 rounded-xl border border-white/10 backdrop-blur-md shadow-xl relative overflow-hidden group">
       {/* Subtle holo grid background effect */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none opacity-50" />
 

@@ -52,7 +52,7 @@ export function LiveMeters() {
     <div className="w-full space-y-4 font-sans text-slate-200">
        
       {/* Metrics Bars Group */}
-      <div className="relative p-6 bg-slate-900/60 rounded-xl backdrop-blur-md border border-white/10 shadow-2xl space-y-5 overflow-hidden group">
+      <div className="relative p-6 bg-slate-900/90 rounded-xl backdrop-blur-md border border-white/10 shadow-2xl space-y-5 overflow-hidden group">
          {/* Holo Grid Background */}
          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none opacity-40" />
          
@@ -99,7 +99,7 @@ export function LiveMeters() {
       <CallMomentum momentum={momentum} isLive={isLive} />
 
       {/* Face Metrics */}
-      <div className="relative p-5 bg-slate-900/55 rounded-xl backdrop-blur-md border border-white/10 shadow-2xl space-y-4 overflow-hidden">
+      <div className="relative p-5 bg-slate-900/90 rounded-xl backdrop-blur-md border border-white/10 shadow-2xl space-y-4 overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:22px_22px] pointer-events-none opacity-40" />
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
         <div className="relative z-10 flex items-center justify-between">

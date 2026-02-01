@@ -23,18 +23,26 @@ export interface MetricBarProps {
   axisZoneLabels?: string[] // Labels below the bar
 }
 
-// Map logical colors to Tailwind classes
+// Map logical colors to Tailwind classes with neon glow effects
 const colorClasses = {
-  green: 'bg-green-500',
-  yellow: 'bg-yellow-400', 
-  red: 'bg-red-500',
-  orange: 'bg-orange-500',
+  green: 'bg-green-400',
+  yellow: 'bg-yellow-300', 
+  red: 'bg-red-400',
+  orange: 'bg-orange-400',
   slate: 'bg-slate-600',
+}
+
+const glowClasses = {
+  green: 'shadow-[0_0_8px_rgba(74,222,128,0.6)]',
+  yellow: 'shadow-[0_0_8px_rgba(253,224,71,0.6)]',
+  red: 'shadow-[0_0_8px_rgba(248,113,113,0.6)]',
+  orange: 'shadow-[0_0_8px_rgba(251,146,60,0.6)]',
+  slate: '',
 }
 
 const textColors = {
   green: 'text-green-400',
-  yellow: 'text-yellow-400',
+  yellow: 'text-yellow-300',
   red: 'text-red-400',
   orange: 'text-orange-400',
   slate: 'text-slate-400',
@@ -53,6 +61,9 @@ export function MetricBar({
   const range = max - min
   const clampedValue = Math.max(min, Math.min(max, value))
   const positionPercent = range > 0 ? ((clampedValue - min) / range) * 100 : 0
+  
+  // Determine which segment the value falls into
+  const activeSegment = segments.find(seg => clampedValue >= seg.start && clampedValue <= seg.end)
   
   return (
     <div className="space-y-1 py-1">
@@ -79,18 +90,17 @@ export function MetricBar({
         {segments.map((segment, i) => {
             const segRange = segment.end - segment.start
             const widthPercent = (segRange / range) * 100
-            
-            // Should this segment be "lit up"? 
-            // In the screenshot, the track is semitransparent colored, 
-            // and the indicator is a bright white dot.
-            // Let's stick to the colored track shown in design.
+            const isActive = activeSegment === segment
             
             return (
                 <div 
                     key={i}
                     className={cn(
-                        "h-1.5 rounded-full opacity-30",
-                        colorClasses[segment.color]
+                        "h-1.5 rounded-full transition-all duration-300",
+                        colorClasses[segment.color],
+                        isActive 
+                          ? cn("opacity-80", glowClasses[segment.color])
+                          : "opacity-40"
                     )}
                     style={{ width: `${widthPercent}%` }}
                 />
