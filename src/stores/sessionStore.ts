@@ -1,4 +1,7 @@
+'use client'
+
 import { create } from 'zustand'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import type { WordTiming } from '@/lib/analysis/voiceMetrics'
 import type { CounterpartyId, SituationId } from '@/lib/scenarios/types'
 import type { CompanyBriefSummary } from '@/lib/company/types'
@@ -92,6 +95,9 @@ export interface PostSessionTranscript {
 export type CompanyContextStatus = 'idle' | 'loading' | 'ready' | 'error' | 'skipped'
 
 interface SessionState {
+  // Client hydration
+  companyContextHydrated: boolean
+
   // Session lifecycle
   status: SessionStatus
   startTime: number | null
@@ -148,6 +154,9 @@ interface SessionState {
 }
 
 interface SessionActions {
+  // Hydration actions
+  setCompanyContextHydrated: (hydrated: boolean) => void
+
   // Status actions
   setStatus: (status: SessionStatus) => void
   markStartTime: (timestampMs?: number) => void
@@ -208,6 +217,7 @@ interface SessionActions {
 }
 
 const initialState: SessionState = {
+  companyContextHydrated: false,
   status: 'idle',
   startTime: null,
   sessionId: null,
@@ -247,156 +257,202 @@ const initialState: SessionState = {
   postSessionTranscript: null,
 }
 
-export const useSessionStore = create<SessionState & SessionActions>((set, get) => ({
-  ...initialState,
+export const useSessionStore = create<SessionState & SessionActions>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
 
-  setStatus: (status) => {
-    const now = Date.now()
-    set((state) => ({
-      status,
-      startTime: status === 'recording' && !state.startTime ? now : state.startTime,
-    }))
-  },
+      setCompanyContextHydrated: (companyContextHydrated) =>
+        set({ companyContextHydrated }),
 
-  markStartTime: (timestampMs) => {
-    set((state) => ({
-      startTime: state.startTime ?? (timestampMs ?? Date.now()),
-    }))
-  },
+      setStatus: (status) => {
+        const now = Date.now()
+        set((state) => ({
+          status,
+          startTime:
+            status === 'recording' && !state.startTime ? now : state.startTime,
+        }))
+      },
 
-  setAnswerStartTime: (timestampMs) => set({ answerStartTime: timestampMs }),
+      markStartTime: (timestampMs) => {
+        set((state) => ({
+          startTime: state.startTime ?? (timestampMs ?? Date.now()),
+        }))
+      },
 
-  addNudge: (nudge) => {
-    const newNudge: Nudge = {
-      ...nudge,
-      id: crypto.randomUUID(),
-      timestamp: Date.now(),
+      setAnswerStartTime: (timestampMs) => set({ answerStartTime: timestampMs }),
+
+      addNudge: (nudge) => {
+        const newNudge: Nudge = {
+          ...nudge,
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+        }
+
+        set((state) => ({
+          nudges: [...state.nudges, newNudge],
+          currentNudge: newNudge,
+        }))
+
+        // Auto-clear current nudge after 5 seconds
+        setTimeout(() => {
+          set((state) =>
+            state.currentNudge?.id === newNudge.id
+              ? { currentNudge: null }
+              : {}
+          )
+        }, 5000)
+
+        return newNudge.id
+      },
+
+      updateNudgeText: (id, text) => {
+        const trimmed = text.trim()
+        if (!trimmed) return
+        set((state) => ({
+          nudges: state.nudges.map((nudge) =>
+            nudge.id === id ? { ...nudge, text: trimmed } : nudge
+          ),
+          currentNudge:
+            state.currentNudge?.id === id
+              ? { ...state.currentNudge, text: trimmed }
+              : state.currentNudge,
+        }))
+      },
+
+      clearCurrentNudge: () => set({ currentNudge: null }),
+
+      updateMetrics: (metrics) => {
+        set((state) => ({
+          metrics: { ...state.metrics, ...metrics },
+        }))
+      },
+
+      updateFaceMetrics: (metrics) => {
+        set((state) => ({
+          faceMetrics: { ...state.faceMetrics, ...metrics },
+        }))
+      },
+
+      setFacePhraseModelEnabled: (enabled) =>
+        set((state) => ({
+          facePhraseModelEnabled: enabled,
+          faceKeyframesEnabled: enabled ? state.faceKeyframesEnabled : false,
+        })),
+
+      setFaceKeyframesEnabled: (enabled) =>
+        set((state) => ({
+          faceKeyframesEnabled:
+            state.strictPrivacyMode || !state.facePhraseModelEnabled
+              ? false
+              : enabled,
+        })),
+
+      setStrictPrivacyMode: (enabled) =>
+        set((state) => ({
+          strictPrivacyMode: enabled,
+          faceKeyframesEnabled: enabled ? false : state.faceKeyframesEnabled,
+        })),
+
+      addTranscriptSegment: (segment) => {
+        const newSegment: TranscriptSegment = {
+          ...segment,
+          id: crypto.randomUUID(),
+        }
+        set((state) => ({
+          transcript: [...state.transcript, newSegment],
+        }))
+      },
+
+      addAudioChunk: (chunk) => {
+        set((state) => ({
+          audioChunks: [...state.audioChunks, chunk],
+        }))
+      },
+
+      setAudioBlob: (blob) => set({ audioBlob: blob }),
+
+      setScenario: (scenarioId) => set({ scenarioId }),
+
+      setMode: (mode) => set({ mode }),
+
+      setCounterparty: (counterparty) => set({ counterparty }),
+
+      setSituation: (situation) => set({ situation }),
+
+      setCompanyUrl: (companyUrl) => set({ companyUrl }),
+
+      setCompanyNotes: (companyNotes) => set({ companyNotes }),
+
+      setCompanyBriefSummary: (companyBriefSummary) =>
+        set({ companyBriefSummary }),
+
+      setCompanyContextStatus: (companyContextStatus) =>
+        set({ companyContextStatus }),
+
+      initSession: () => {
+        const sessionId = crypto.randomUUID()
+        set({ sessionId })
+        return sessionId
+      },
+
+      setAnalysisStatus: (status) => set({ analysisStatus: status }),
+
+      setAnalysis: (analysis) => set({ analysis, analysisStatus: 'complete' }),
+
+      setAnalysisError: (error) =>
+        set({ analysisError: error, analysisStatus: 'error' }),
+
+      clearAnalysisError: () => set({ analysisError: null }),
+
+      setTranscriptionStatus: (status) => set({ transcriptionStatus: status }),
+
+      setTranscriptionError: (error) =>
+        set({ transcriptionError: error, transcriptionStatus: 'error' }),
+
+      clearTranscriptionError: () => set({ transcriptionError: null }),
+
+      setPostSessionTranscript: (postSessionTranscript) =>
+        set({ postSessionTranscript }),
+
+      reset: () =>
+        set((state) => ({
+          ...initialState,
+          // Keep company context across new sessions by default.
+          companyContextHydrated: state.companyContextHydrated,
+          companyUrl: state.companyUrl,
+          companyNotes: state.companyNotes,
+          companyBriefSummary: state.companyBriefSummary,
+          companyContextStatus: state.companyContextStatus,
+        })),
+    }),
+    {
+      name: 'kawkai-company-context-v1',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        companyUrl: state.companyUrl,
+        companyNotes: state.companyNotes,
+        companyBriefSummary: state.companyBriefSummary,
+        companyContextStatus: state.companyContextStatus,
+      }),
+      onRehydrateStorage: () => (state) => {
+        state?.setCompanyContextHydrated(true)
+
+        if (!state) return
+
+        // Never revive transient states.
+        if (state.companyContextStatus === 'loading') {
+          state.setCompanyContextStatus('idle')
+        }
+
+        // If we have a summary, consider it ready.
+        if (state.companyBriefSummary) {
+          state.setCompanyContextStatus('ready')
+        }
+      },
     }
-
-    set((state) => ({
-      nudges: [...state.nudges, newNudge],
-      currentNudge: newNudge,
-    }))
-
-    // Auto-clear current nudge after 5 seconds
-    setTimeout(() => {
-      set((state) =>
-        state.currentNudge?.id === newNudge.id
-          ? { currentNudge: null }
-          : {}
-      )
-    }, 5000)
-
-    return newNudge.id
-  },
-
-  updateNudgeText: (id, text) => {
-    const trimmed = text.trim()
-    if (!trimmed) return
-    set((state) => ({
-      nudges: state.nudges.map((nudge) =>
-        nudge.id === id ? { ...nudge, text: trimmed } : nudge
-      ),
-      currentNudge:
-        state.currentNudge?.id === id
-          ? { ...state.currentNudge, text: trimmed }
-          : state.currentNudge,
-    }))
-  },
-
-  clearCurrentNudge: () => set({ currentNudge: null }),
-
-  updateMetrics: (metrics) => {
-    set((state) => ({
-      metrics: { ...state.metrics, ...metrics },
-    }))
-  },
-
-  updateFaceMetrics: (metrics) => {
-    set((state) => ({
-      faceMetrics: { ...state.faceMetrics, ...metrics },
-    }))
-  },
-
-  setFacePhraseModelEnabled: (enabled) =>
-    set((state) => ({
-      facePhraseModelEnabled: enabled,
-      faceKeyframesEnabled: enabled ? state.faceKeyframesEnabled : false,
-    })),
-
-  setFaceKeyframesEnabled: (enabled) =>
-    set((state) => ({
-      faceKeyframesEnabled:
-        state.strictPrivacyMode || !state.facePhraseModelEnabled
-          ? false
-          : enabled,
-    })),
-
-  setStrictPrivacyMode: (enabled) =>
-    set((state) => ({
-      strictPrivacyMode: enabled,
-      faceKeyframesEnabled: enabled ? false : state.faceKeyframesEnabled,
-    })),
-
-  addTranscriptSegment: (segment) => {
-    const newSegment: TranscriptSegment = {
-      ...segment,
-      id: crypto.randomUUID(),
-    }
-    set((state) => ({
-      transcript: [...state.transcript, newSegment],
-    }))
-  },
-
-  addAudioChunk: (chunk) => {
-    set((state) => ({
-      audioChunks: [...state.audioChunks, chunk],
-    }))
-  },
-
-  setAudioBlob: (blob) => set({ audioBlob: blob }),
-
-  setScenario: (scenarioId) => set({ scenarioId }),
-
-  setMode: (mode) => set({ mode }),
-
-  setCounterparty: (counterparty) => set({ counterparty }),
-
-  setSituation: (situation) => set({ situation }),
-
-  setCompanyUrl: (companyUrl) => set({ companyUrl }),
-
-  setCompanyNotes: (companyNotes) => set({ companyNotes }),
-
-  setCompanyBriefSummary: (companyBriefSummary) => set({ companyBriefSummary }),
-
-  setCompanyContextStatus: (companyContextStatus) => set({ companyContextStatus }),
-
-  initSession: () => {
-    const sessionId = crypto.randomUUID()
-    set({ sessionId })
-    return sessionId
-  },
-
-  setAnalysisStatus: (status) => set({ analysisStatus: status }),
-
-  setAnalysis: (analysis) => set({ analysis, analysisStatus: 'complete' }),
-
-  setAnalysisError: (error) => set({ analysisError: error, analysisStatus: 'error' }),
-
-  clearAnalysisError: () => set({ analysisError: null }),
-
-  setTranscriptionStatus: (status) => set({ transcriptionStatus: status }),
-
-  setTranscriptionError: (error) =>
-    set({ transcriptionError: error, transcriptionStatus: 'error' }),
-
-  clearTranscriptionError: () => set({ transcriptionError: null }),
-
-  setPostSessionTranscript: (postSessionTranscript) => set({ postSessionTranscript }),
-
-  reset: () => set(initialState),
-}))
+  )
+)
 
 // Selectors for common derived state
 export const selectElapsedTime = (state: SessionState) => {

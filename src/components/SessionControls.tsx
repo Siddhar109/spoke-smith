@@ -171,23 +171,31 @@ export function SessionControls({
 
       {/* Main Buttons */}
       {!isConnected && !isConnecting && (
-        <Button
-          onClick={onStart}
-          size="lg"
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-2xl shadow-[0_4px_14px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] transition-all duration-300 active:scale-[0.98] h-14"
-        >
-          <span className="flex items-center gap-2">
-            Start Live Session
-          </span>
-          <svg
-            className="w-5 h-5 ml-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="space-y-2">
+          <Button
+            onClick={onStart}
+            size="lg"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-2xl shadow-[0_4px_14px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] transition-all duration-300 active:scale-[0.98] h-14"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-        </Button>
+            <span className="flex items-center gap-2">Start Live Session</span>
+            <svg
+              className="w-5 h-5 ml-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              />
+            </svg>
+          </Button>
+          <p className="text-[11px] text-slate-400 leading-relaxed text-center">
+            Sessions auto-end after 5 minutes for safety.
+          </p>
+        </div>
       )}
 
       {isConnecting && (

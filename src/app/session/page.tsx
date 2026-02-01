@@ -20,6 +20,8 @@ import type { WordTiming } from '@/lib/analysis/voiceMetrics'
 import { formatDuration } from '@/lib/analysis/voiceMetrics'
 import { Timeline, type TimelineMarker } from '@/components/Timeline'
 
+const SESSION_HARD_LIMIT_MS = 5 * 60 * 1000
+
 export default function SessionPage() {
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -39,7 +41,7 @@ export default function SessionPage() {
     refreshDevices,
   } = useMediaCapture({ audio: true, video: true, audioDeviceId, videoDeviceId })
   const { startRecording, stopRecording } = useAudioRecorder()
-  const { connect, disconnect, isConnected, isConnecting, error } =
+  const { connect, disconnect, isConnected, isConnecting, connectionStatus, error } =
     useRealtimeCoach()
   useFaceCoach(stream)
   const {
@@ -80,6 +82,7 @@ export default function SessionPage() {
     companyNotes,
     companyBriefSummary,
     companyContextStatus,
+    companyContextHydrated,
     setCompanyUrl,
     setCompanyNotes,
     setCompanyBriefSummary,
@@ -92,8 +95,19 @@ export default function SessionPage() {
     null
   )
   const [isCompanyContextOpen, setIsCompanyContextOpen] = useState(false)
+  const [hardLimitHit, setHardLimitHit] = useState(false)
   const hasCompanyContext =
     Boolean(companyUrl) || Boolean(companyNotes) || Boolean(companyBriefSummary)
+
+  const hardLimitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const stopSessionInFlightRef = useRef<Promise<void> | null>(null)
+
+  const clearHardLimitTimeout = useCallback(() => {
+    if (hardLimitTimeoutRef.current) {
+      clearTimeout(hardLimitTimeoutRef.current)
+      hardLimitTimeoutRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -101,11 +115,73 @@ export default function SessionPage() {
     }
   }, [audioUrl])
 
+  useEffect(() => {
+    return () => {
+      clearHardLimitTimeout()
+    }
+  }, [clearHardLimitTimeout])
+
+  useEffect(() => {
+    if (connectionStatus === 'failed' || connectionStatus === 'disconnected') {
+      clearHardLimitTimeout()
+    }
+  }, [clearHardLimitTimeout, connectionStatus])
+
+  const stopSession = useCallback(
+    async (reason: 'manual' | 'hard-limit' = 'manual') => {
+      if (stopSessionInFlightRef.current) return stopSessionInFlightRef.current
+
+      const stopPromise = (async () => {
+        clearHardLimitTimeout()
+
+        // Stop recording before stopping the underlying track.
+        const blobPromise = stopRecording().catch(() => null)
+
+        disconnect()
+        stopCapture()
+
+        const blob = await blobPromise
+
+        if (blob) {
+          setAudioBlob(blob)
+          setAudioUrl(URL.createObjectURL(blob))
+        }
+
+        if (reason === 'hard-limit') {
+          setHardLimitHit(true)
+        }
+
+        setStatus('completed')
+      })()
+
+      stopSessionInFlightRef.current = stopPromise
+
+      try {
+        await stopPromise
+      } finally {
+        stopSessionInFlightRef.current = null
+      }
+
+      return stopPromise
+    },
+    [
+      clearHardLimitTimeout,
+      disconnect,
+      setAudioBlob,
+      setAudioUrl,
+      setStatus,
+      stopCapture,
+      stopRecording,
+    ]
+  )
+
   const handleStart = useCallback(async () => {
     try {
       setAudioUrl(null)
       setAudioDurationSeconds(0)
       setAudioCurrentSeconds(0)
+      setHardLimitHit(false)
+      clearHardLimitTimeout()
 
       // Initialize session with unique ID
       initSession()
@@ -119,57 +195,44 @@ export default function SessionPage() {
       markStartTime()
       startRecording(new MediaStream([audioTrack]))
 
+      hardLimitTimeoutRef.current = setTimeout(() => {
+        void stopSession('hard-limit')
+      }, SESSION_HARD_LIMIT_MS)
+
       // Connect to realtime coach
       await connect(audioTrack)
     } catch (err) {
       console.error('Failed to start session:', err)
+      clearHardLimitTimeout()
       await stopRecording().catch(() => null)
       disconnect()
       stopCapture()
     }
   }, [
+    clearHardLimitTimeout,
     connect,
     disconnect,
     getAudioTrack,
     initSession,
     markStartTime,
     setAudioUrl,
+    setHardLimitHit,
     startCapture,
     startRecording,
     stopRecording,
     stopCapture,
-  ])
-
-  const handleStop = useCallback(async () => {
-    // Stop recording before stopping the underlying track.
-    const blobPromise = stopRecording().catch(() => null)
-
-    disconnect()
-    stopCapture()
-
-    const blob = await blobPromise
-
-    if (blob) {
-      setAudioBlob(blob)
-      setAudioUrl(URL.createObjectURL(blob))
-    }
-
-    setStatus('completed')
-  }, [
-    disconnect,
-    stopCapture,
-    stopRecording,
-    setAudioBlob,
-    setStatus,
+    stopSession,
   ])
 
   const handleReset = useCallback(() => {
     setAudioUrl(null)
     setAudioDurationSeconds(0)
     setAudioCurrentSeconds(0)
+    setHardLimitHit(false)
+    clearHardLimitTimeout()
     reset()
     setSelectedScenario(null)
-  }, [reset, setAudioUrl, setSelectedScenario])
+  }, [clearHardLimitTimeout, reset, setAudioUrl, setSelectedScenario])
 
   const handleScenarioSelect = useCallback(
     (scenario: Scenario) => {
@@ -552,9 +615,10 @@ export default function SessionPage() {
   // Pre-session: Scenario selection
   if (status === 'idle' && !selectedScenario) {
     const showCompanyModal =
-      companyContextStatus === 'idle' ||
-      companyContextStatus === 'loading' ||
-      companyContextStatus === 'error'
+      companyContextHydrated &&
+      (companyContextStatus === 'idle' ||
+        companyContextStatus === 'loading' ||
+        companyContextStatus === 'error')
 
     return (
       <main className="min-h-screen overflow-hidden relative bg-[#FAFAFA]">
@@ -1004,11 +1068,16 @@ export default function SessionPage() {
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">
                   Session Control
                 </h3>
+                {hardLimitHit && !isConnected && !isConnecting && (
+                  <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                    Session auto-ended after 5 minutes. You can start a new one anytime.
+                  </div>
+                )}
                 <SessionControls
                 isConnected={isConnected}
                 isConnecting={isConnecting}
                 onStart={handleStart}
-                onStop={handleStop}
+                onStop={stopSession}
                 onReset={
                     status !== 'recording' && status !== 'connecting'
                     ? handleReset
