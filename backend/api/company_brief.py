@@ -16,6 +16,19 @@ router = APIRouter()
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 COMPANY_BRIEF_MODEL = os.getenv("OPENAI_COMPANY_BRIEF_MODEL", "gpt-5-mini")
+COMPANY_BRIEF_MAX_OUTPUT_TOKENS_DEFAULT = 1600
+COMPANY_BRIEF_LIST_LIMIT_DEFAULT = 6
+
+
+def _get_int_env(name: str, default: int, *, min_value: int, max_value: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        value = int(str(raw).strip())
+    except ValueError:
+        return default
+    return max(min_value, min(max_value, value))
 
 
 def normalize_url(url: str) -> str:
@@ -96,6 +109,19 @@ async def create_company_brief(request: CompanyBriefRequest):
 
     notes = (request.notes or "").strip()
 
+    list_limit = _get_int_env(
+        "OPENAI_COMPANY_BRIEF_LIST_LIMIT",
+        COMPANY_BRIEF_LIST_LIMIT_DEFAULT,
+        min_value=2,
+        max_value=12,
+    )
+    max_output_tokens = _get_int_env(
+        "OPENAI_COMPANY_BRIEF_MAX_OUTPUT_TOKENS",
+        COMPANY_BRIEF_MAX_OUTPUT_TOKENS_DEFAULT,
+        min_value=400,
+        max_value=4000,
+    )
+
     system_prompt = (
         "You are a concise research assistant. Use web search to gather company context from "
         "official sources (homepage, about, product, pricing, docs, newsroom) using the provided "
@@ -110,80 +136,86 @@ User notes (optional):
 
 Return JSON with keys:
 - one_liner (string)
-- products_services (string[])
-- customers_users (string[])
-- positioning_claims (string[])
-- risk_areas (string[])
-- unknowns (string[])
+- products_services (string[], max {list_limit} items)
+- customers_users (string[], max {list_limit} items)
+- positioning_claims (string[], max {list_limit} items)
+- risk_areas (string[], max {list_limit} items)
+- unknowns (string[], max {list_limit} items)
 - generated_at (ISO timestamp)
+
+Style constraints:
+- Be brief and non-marketing.
+- Each list item should be a short phrase (prefer <= 12 words).
 """
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            payload = {
+                "model": COMPANY_BRIEF_MODEL,
+                "tools": [{"type": "web_search"}],
+                "tool_choice": "auto",
+                "reasoning": {"effort": "low"},
+                "text": {
+                    "format": {
+                        "type": "json_schema",
+                        "name": "company_brief_summary",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "one_liner": {"type": "string"},
+                                "products_services": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "customers_users": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "positioning_claims": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "risk_areas": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "unknowns": {"type": "array", "items": {"type": "string"}},
+                                "generated_at": {"type": "string"},
+                            },
+                            "required": [
+                                "one_liner",
+                                "products_services",
+                                "customers_users",
+                                "positioning_claims",
+                                "risk_areas",
+                                "unknowns",
+                                "generated_at",
+                            ],
+                            "additionalProperties": False,
+                        },
+                    }
+                },
+                "input": [
+                    {
+                        "role": "system",
+                        "content": [{"type": "input_text", "text": system_prompt}],
+                    },
+                    {
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": user_prompt}],
+                    },
+                ],
+                "max_output_tokens": max_output_tokens,
+                "store": False,
+            }
+
             response = await client.post(
                 OPENAI_RESPONSES_URL,
                 headers={
                     "Authorization": f"Bearer {openai_api_key}",
                     "Content-Type": "application/json",
                 },
-                json={
-                    "model": COMPANY_BRIEF_MODEL,
-                    "tools": [{"type": "web_search"}],
-                    "tool_choice": "auto",
-                    "reasoning": {"effort": "low"},
-                    "text": {
-                        "format": {
-                            "type": "json_schema",
-                            "name": "company_brief_summary",
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "one_liner": {"type": "string"},
-                                    "products_services": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                    },
-                                    "customers_users": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                    },
-                                    "positioning_claims": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                    },
-                                    "risk_areas": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                    },
-                                    "unknowns": {"type": "array", "items": {"type": "string"}},
-                                    "generated_at": {"type": "string"},
-                                },
-                                "required": [
-                                    "one_liner",
-                                    "products_services",
-                                    "customers_users",
-                                    "positioning_claims",
-                                    "risk_areas",
-                                    "unknowns",
-                                    "generated_at",
-                                ],
-                                "additionalProperties": False,
-                            },
-                        }
-                    },
-                    "input": [
-                        {
-                            "role": "system",
-                            "content": [{"type": "input_text", "text": system_prompt}],
-                        },
-                        {
-                            "role": "user",
-                            "content": [{"type": "input_text", "text": user_prompt}],
-                        },
-                    ],
-                    "max_output_tokens": 900,
-                    "store": False,
-                },
+                json=payload,
             )
 
             if response.status_code != 200:
@@ -198,10 +230,54 @@ Return JSON with keys:
                 details = data.get("incomplete_details")
                 if isinstance(details, dict):
                     reason = details.get("reason")
-                detail = "OpenAI response incomplete."
-                if reason:
-                    detail = f"OpenAI response incomplete: {reason}."
-                raise HTTPException(status_code=502, detail=detail)
+                if reason == "max_output_tokens":
+                    retry_limit = max(2, min(4, list_limit - 2))
+                    retry_max_output_tokens = min(4000, max_output_tokens * 2)
+                    retry_user_prompt = user_prompt.replace(
+                        f"max {list_limit} items", f"max {retry_limit} items"
+                    ) + "\nIf you are at risk of running out of tokens, shorten list items further."
+
+                    retry_payload = dict(payload)
+                    retry_payload["max_output_tokens"] = retry_max_output_tokens
+                    retry_payload["input"] = [
+                        payload["input"][0],
+                        {
+                            "role": "user",
+                            "content": [{"type": "input_text", "text": retry_user_prompt}],
+                        },
+                    ]
+
+                    retry_response = await client.post(
+                        OPENAI_RESPONSES_URL,
+                        headers={
+                            "Authorization": f"Bearer {openai_api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json=retry_payload,
+                    )
+
+                    if retry_response.status_code != 200:
+                        raise HTTPException(
+                            status_code=retry_response.status_code,
+                            detail=f"OpenAI API error: {retry_response.text}",
+                        )
+
+                    data = retry_response.json()
+
+                if data.get("status") != "completed":
+                    reason = None
+                    details = data.get("incomplete_details")
+                    if isinstance(details, dict):
+                        reason = details.get("reason")
+                    detail = "OpenAI response incomplete."
+                    if reason:
+                        detail = f"OpenAI response incomplete: {reason}."
+                    if reason == "max_output_tokens":
+                        detail += (
+                            " Increase OPENAI_COMPANY_BRIEF_MAX_OUTPUT_TOKENS or reduce "
+                            "OPENAI_COMPANY_BRIEF_LIST_LIMIT."
+                        )
+                    raise HTTPException(status_code=502, detail=detail)
             summary_data = _extract_json_payload(data)
             if not summary_data:
                 raise HTTPException(

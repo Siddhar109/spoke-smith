@@ -29,7 +29,13 @@ Notes:
    - **Build type**: `Dockerfile`
    - **Dockerfile directory**: `backend` (where `backend/Dockerfile` lives)
 5. Runtime configuration:
-   - Set env var `CORS_ALLOW_ORIGINS` to the frontend service URL (comma-separated if multiple), e.g. `https://YOUR-FRONTEND-xxxx.a.run.app`
+   - Set env var `CORS_ALLOW_ORIGINS` to the frontend service **origin** (comma-separated if multiple), e.g. `https://YOUR-FRONTEND-xxxx.a.run.app` (no trailing `/`)
+     - Optional: `CORS_ALLOW_ORIGIN_REGEX` for pattern-based allow (e.g. multiple preview URLs)
+     - Optional (not recommended for production): `CORS_ALLOW_ORIGINS=*` to allow any origin (credentials will be disabled)
+   - Set env var `OPENAI_API_KEY`
+   - Optional tuning (if company context is truncating):
+     - `OPENAI_COMPANY_BRIEF_MAX_OUTPUT_TOKENS` (default `1600`)
+     - `OPENAI_COMPANY_BRIEF_LIST_LIMIT` (default `6`)
    - Add any other backend env vars/secrets your app needs (recommended via Secret Manager)
 
 Notes:
@@ -40,4 +46,3 @@ Notes:
 
 - **Authentication**: easiest is “Allow unauthenticated” for both services while you’re iterating.
 - **Region**: keep both services in the same region to minimize latency.
-
