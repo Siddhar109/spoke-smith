@@ -21,6 +21,11 @@ class TokenRequest(BaseModel):
     """Request model for token endpoint."""
     mode: str = "coach"  # "coach" or "journalist"
     scenario_id: str | None = None
+    counterparty: str | None = None
+    situation: str | None = None
+    company_url: str | None = None
+    company_notes: str | None = None
+    company_brief_summary: dict | None = None
 
 
 @router.post("/token", response_model=TokenResponse)
@@ -29,11 +34,8 @@ async def create_ephemeral_token(request: TokenRequest = TokenRequest()):
     Generate an ephemeral token for client-side WebRTC connection.
     The token expires in 60 seconds.
     """
-    from prompts.coach_system import COACH_SYSTEM_PROMPT
-    from prompts.journalist_system import create_journalist_prompt
-    from prompts.journalist_system import DEFAULT_JOURNALIST_PROMPT
+    from prompts.instructions_builder import build_instructions
     from prompts.nudge_tools import NUDGE_TOOL
-    from prompts.scenario_library import get_journalist_scenario
 
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if not openai_api_key:
@@ -42,18 +44,15 @@ async def create_ephemeral_token(request: TokenRequest = TokenRequest()):
             detail="OpenAI API key not configured. Set OPENAI_API_KEY environment variable."
         )
 
-    # Choose system prompt based on mode
-    if request.mode == "journalist":
-        scenario = get_journalist_scenario(request.scenario_id)
-        if scenario:
-            system_prompt = create_journalist_prompt(
-                scenario_context=scenario["context"],
-                questions=scenario["questions"],
-            )
-        else:
-            system_prompt = DEFAULT_JOURNALIST_PROMPT
-    else:
-        system_prompt = COACH_SYSTEM_PROMPT
+    system_prompt = build_instructions(
+        mode=request.mode,
+        scenario_id=request.scenario_id,
+        counterparty=request.counterparty,
+        situation=request.situation,
+        company_url=request.company_url,
+        company_notes=request.company_notes,
+        company_brief_summary=request.company_brief_summary,
+    )
 
     try:
         async with httpx.AsyncClient() as client:

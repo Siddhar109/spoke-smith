@@ -34,6 +34,11 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
     setAnswerStartTime,
     mode,
     scenarioId,
+    counterparty,
+    situation,
+    companyUrl,
+    companyNotes,
+    companyBriefSummary,
   } = useSessionStore()
 
   const wordTimingsRef = useRef<WordTiming[]>([])
@@ -202,7 +207,15 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ mode, scenario_id: scenarioId }),
+          body: JSON.stringify({
+            mode,
+            scenario_id: scenarioId,
+            counterparty,
+            situation,
+            company_url: companyUrl,
+            company_notes: companyNotes,
+            company_brief_summary: companyBriefSummary,
+          }),
         })
 
         if (!response.ok) {
@@ -223,7 +236,17 @@ export function useRealtimeCoach(): UseRealtimeCoachReturn {
         throw error
       }
     },
-    [mode, scenarioId, setAnswerStartTime, updateMetrics]
+    [
+      mode,
+      scenarioId,
+      counterparty,
+      situation,
+      companyUrl,
+      companyNotes,
+      companyBriefSummary,
+      setAnswerStartTime,
+      updateMetrics,
+    ]
   )
 
   const disconnect = useCallback(() => {

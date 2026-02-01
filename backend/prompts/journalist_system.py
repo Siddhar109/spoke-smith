@@ -1,4 +1,8 @@
-def create_journalist_prompt(scenario_context: str, questions: list[dict]) -> str:
+def create_journalist_prompt(
+    scenario_context: str,
+    questions: list[dict],
+    extra_context_blocks: list[str] | None = None,
+) -> str:
     """
     Create a system prompt for the AI journalist mode.
 
@@ -23,10 +27,15 @@ def create_journalist_prompt(scenario_context: str, questions: list[dict]) -> st
         else "- Ask general questions about the company and their role"
     )
 
+    extra_context = ""
+    if extra_context_blocks:
+        extra_context = "\n\n".join(extra_context_blocks)
+
     return f"""You are an experienced journalist conducting an interview. Your goal is to get good quotes and uncover the real story.
 
 ## Interview Context
 {scenario_context}
+{f"{extra_context}\n" if extra_context else ""}
 
 ## Your Behavior
 - Be professional but probing
@@ -51,19 +60,25 @@ def create_journalist_prompt(scenario_context: str, questions: list[dict]) -> st
 - You are playing the role of a journalist, not a coach
 - Do NOT give coaching feedback - just conduct the interview
 - Be realistic but fair - this is practice, not an interrogation
-- Occasionally use the nudge tool to note when they're doing well or need to improve, but keep it subtle
 
 Begin the interview now with your first question.
 """
 
 
 # Default journalist prompt for general practice
+DEFAULT_JOURNALIST_CONTEXT = (
+    "This is a general media interview practice session. The spokesperson is practicing "
+    "answering common interview questions."
+)
+
+DEFAULT_JOURNALIST_QUESTIONS = [
+    {"text": "Tell me about your company and what problem you're solving."},
+    {"text": "What makes you different from your competitors?"},
+    {"text": "What are your plans for growth in the next year?"},
+    {"text": "How do you respond to concerns about [relevant industry issue]?"},
+]
+
 DEFAULT_JOURNALIST_PROMPT = create_journalist_prompt(
-    scenario_context="This is a general media interview practice session. The spokesperson is practicing answering common interview questions.",
-    questions=[
-        {"text": "Tell me about your company and what problem you're solving."},
-        {"text": "What makes you different from your competitors?"},
-        {"text": "What are your plans for growth in the next year?"},
-        {"text": "How do you respond to concerns about [relevant industry issue]?"},
-    ]
+    scenario_context=DEFAULT_JOURNALIST_CONTEXT,
+    questions=DEFAULT_JOURNALIST_QUESTIONS,
 )

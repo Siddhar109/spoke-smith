@@ -1,6 +1,13 @@
 export type ScenarioCategory = 'crisis' | 'product' | 'earnings' | 'general'
 export type QuestionDifficulty = 'soft' | 'medium' | 'hostile'
 export type ScenarioDifficulty = 'beginner' | 'intermediate' | 'advanced'
+export type CounterpartyId =
+  | 'journalist'
+  | 'public'
+  | 'stakeholder'
+  | 'partner'
+  | 'customer'
+export type SituationId = 'interview' | 'crisis' | 'demo'
 
 export interface Question {
   id: string
@@ -21,6 +28,9 @@ export interface Scenario {
   questions: Question[]
   keyMessages: string[] // What spokesperson should convey
   redLines: string[] // What to avoid saying
+  recommendedForCounterparties?: CounterpartyId[]
+  recommendedForSituations?: SituationId[]
+  priority?: number
 }
 
 // UI helpers

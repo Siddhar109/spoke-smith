@@ -8,6 +8,9 @@ export const defaultScenarios: Scenario[] = [
       'Practice handling questions about layoffs and company restructuring',
     category: 'crisis',
     difficulty: 'advanced',
+    recommendedForCounterparties: ['journalist', 'stakeholder', 'public'],
+    recommendedForSituations: ['crisis'],
+    priority: 2,
     context: `The company has just announced a 15% workforce reduction (approximately 500 employees).
 The spokesperson is the VP of Communications. This is the first media interview after the announcement.
 The journalist is from a major business publication and is known for tough questioning.`,
@@ -59,6 +62,9 @@ The journalist is from a major business publication and is known for tough quest
     description: 'Practice announcing a new product to the media',
     category: 'product',
     difficulty: 'beginner',
+    recommendedForCounterparties: ['journalist', 'partner', 'customer'],
+    recommendedForSituations: ['demo', 'interview'],
+    priority: 1,
     context: `The company is launching a new AI-powered feature for its main product.
 This is an exclusive interview with a tech journalist from a respected publication.
 The journalist is generally favorable but will ask probing questions.`,
@@ -108,6 +114,9 @@ The journalist is generally favorable but will ask probing questions.`,
       'Practice a general interview about the company and your role',
     category: 'general',
     difficulty: 'beginner',
+    recommendedForCounterparties: ['journalist', 'stakeholder', 'public'],
+    recommendedForSituations: ['interview'],
+    priority: 1,
     context: `A business journalist is doing a profile piece on the company for a general business audience.
 This is a friendly but thorough interview.
 The journalist wants to understand the company story and vision.`,
@@ -152,6 +161,14 @@ The journalist wants to understand the company story and vision.`,
     description: 'Practice communicating about a data security incident',
     category: 'crisis',
     difficulty: 'advanced',
+    recommendedForCounterparties: [
+      'journalist',
+      'customer',
+      'public',
+      'stakeholder',
+    ],
+    recommendedForSituations: ['crisis'],
+    priority: 2,
     context: `The company recently discovered and disclosed a security incident that potentially affected customer data.
 The spokesperson is the Chief Information Security Officer.
 The journalist is a cybersecurity reporter with deep technical knowledge.`,

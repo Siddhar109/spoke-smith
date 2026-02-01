@@ -7,18 +7,56 @@ import {
   categoryColors,
   difficultyLabels,
   difficultyColors,
+  type CounterpartyId,
+  type SituationId,
 } from '@/lib/scenarios/types'
 import { cn } from '@/lib/utils'
 
 interface ScenarioSelectorProps {
   onSelect: (scenario: Scenario) => void
   selectedId?: string
+  counterparty?: CounterpartyId
+  situation?: SituationId
 }
 
-export function ScenarioSelector({ onSelect, selectedId }: ScenarioSelectorProps) {
+export function ScenarioSelector({
+  onSelect,
+  selectedId,
+  counterparty,
+  situation,
+}: ScenarioSelectorProps) {
+  const scoredScenarios = defaultScenarios.map((scenario, index) => {
+    const matchesSituation = Boolean(
+      situation && scenario.recommendedForSituations?.includes(situation)
+    )
+    const matchesCounterparty = Boolean(
+      counterparty && scenario.recommendedForCounterparties?.includes(counterparty)
+    )
+
+    const score =
+      (matchesSituation ? 2 : 0) +
+      (matchesCounterparty ? 1 : 0) +
+      (scenario.priority ?? 0)
+
+    return {
+      scenario,
+      index,
+      score,
+    }
+  })
+
+  const sortedByScore = [...scoredScenarios].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    return a.index - b.index
+  })
+
+  const matching = sortedByScore.filter((item) => item.score > 0)
+  const selectionBase = matching.length >= 2 ? matching : sortedByScore
+  const recommended = selectionBase.slice(0, 3).map((item) => item.scenario)
+
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      {defaultScenarios.map((scenario) => (
+      {recommended.map((scenario) => (
         <div
           key={scenario.id}
           className={cn(

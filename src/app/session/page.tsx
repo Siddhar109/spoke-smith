@@ -13,8 +13,10 @@ import { LiveMeters } from '@/components/LiveMeters'
 import { LiveNudge } from '@/components/LiveNudge'
 import { Button } from '@/components/ui/button'
 import { Scenario } from '@/lib/scenarios/types'
+import type { CounterpartyId, SituationId } from '@/lib/scenarios/types'
 import Link from 'next/link'
 import { uploadSession } from '@/lib/api/sessionApi'
+import { createCompanyBrief } from '@/lib/api/companyBriefApi'
 import type { WordTiming } from '@/lib/analysis/voiceMetrics'
 import { formatDuration } from '@/lib/analysis/voiceMetrics'
 import { Timeline, type TimelineMarker } from '@/components/Timeline'
@@ -71,7 +73,28 @@ export default function SessionPage() {
     setFacePhraseModelEnabled,
     setFaceKeyframesEnabled,
     setStrictPrivacyMode,
+    counterparty,
+    situation,
+    setCounterparty,
+    setSituation,
+    companyUrl,
+    companyNotes,
+    companyBriefSummary,
+    companyContextStatus,
+    setCompanyUrl,
+    setCompanyNotes,
+    setCompanyBriefSummary,
+    setCompanyContextStatus,
   } = useSessionStore()
+
+  const [companyUrlInput, setCompanyUrlInput] = useState(companyUrl ?? '')
+  const [companyNotesInput, setCompanyNotesInput] = useState(companyNotes ?? '')
+  const [companyContextError, setCompanyContextError] = useState<string | null>(
+    null
+  )
+  const [isCompanyContextOpen, setIsCompanyContextOpen] = useState(false)
+  const hasCompanyContext =
+    Boolean(companyUrl) || Boolean(companyNotes) || Boolean(companyBriefSummary)
 
   useEffect(() => {
     return () => {
@@ -310,16 +333,311 @@ export default function SessionPage() {
     el.currentTime = Math.max(0, seconds)
   }, [])
 
-  // Dropdown state
-  const [partnerRole, setPartnerRole] = useState<string>('Journalist')
-  const [situation, setSituation] = useState<string>('Interview')
+  useEffect(() => {
+    if (companyContextStatus === 'idle') {
+      setCompanyUrlInput(companyUrl ?? '')
+      setCompanyNotesInput(companyNotes ?? '')
+      setCompanyContextError(null)
+    }
+  }, [companyContextStatus, companyNotes, companyUrl])
+
+  const handleCompanyContextSubmit = useCallback(async () => {
+    const url = companyUrlInput.trim()
+    if (!url) {
+      setCompanyContextError('Please enter a company website URL or skip.')
+      return
+    }
+
+    setCompanyContextError(null)
+    setCompanyContextStatus('loading')
+    setCompanyUrl(url)
+
+    const notes = companyNotesInput.trim()
+    setCompanyNotes(notes ? notes : null)
+
+    try {
+      const response = await createCompanyBrief({
+        company_url: url,
+        notes: notes || undefined,
+      })
+      setCompanyBriefSummary(response.company_brief_summary)
+      setCompanyContextStatus('ready')
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to create company brief'
+      setCompanyContextError(message)
+      setCompanyContextStatus('error')
+    }
+  }, [
+    companyNotesInput,
+    companyUrlInput,
+    setCompanyBriefSummary,
+    setCompanyContextStatus,
+    setCompanyNotes,
+    setCompanyUrl,
+  ])
+
+  const handleCompanyContextSkip = useCallback(() => {
+    setCompanyContextError(null)
+    setCompanyBriefSummary(null)
+    setCompanyUrl(null)
+    setCompanyNotes(null)
+    setCompanyContextStatus('skipped')
+  }, [
+    setCompanyBriefSummary,
+    setCompanyContextStatus,
+    setCompanyNotes,
+    setCompanyUrl,
+  ])
+
+  const handleCompanyContextEdit = useCallback(() => {
+    setCompanyContextStatus('idle')
+    setIsCompanyContextOpen(false)
+  }, [setCompanyContextStatus])
+
+  const companyContextViewModal = isCompanyContextOpen ? (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 backdrop-blur-sm px-4 sm:px-6 py-6 sm:py-8 overflow-y-auto">
+      <div className="w-full max-w-2xl rounded-3xl bg-white shadow-[0_30px_120px_rgba(15,23,42,0.35)] border border-slate-100 p-6 sm:p-8 max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col min-h-0">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h2 className="text-2xl font-light text-slate-900 tracking-tight">
+              Company context
+            </h2>
+            <p className="text-sm text-slate-500 mt-2">
+              The AI uses this to tailor questions and coaching.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsCompanyContextOpen(false)}
+            className="h-9 w-9 rounded-full border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 transition flex items-center justify-center"
+            aria-label="Close company context"
+          >
+            <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current">
+              <path d="M11.06 10l4.24-4.24-1.06-1.06L10 8.94 5.76 4.7 4.7 5.76 8.94 10l-4.24 4.24 1.06 1.06L10 11.06l4.24 4.24 1.06-1.06z" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-5 flex-1 min-h-0 overflow-y-auto pr-2 -mr-2">
+          {companyContextStatus === 'loading' && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              Updating company context…
+            </div>
+          )}
+
+          {!hasCompanyContext && companyContextStatus !== 'loading' && (
+            <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              No company context has been added yet.
+            </div>
+          )}
+
+          {companyUrl && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                Website
+              </p>
+              <p className="text-sm text-slate-700 break-all">{companyUrl}</p>
+            </div>
+          )}
+
+          {companyNotes && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                Notes
+              </p>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                {companyNotes}
+              </p>
+            </div>
+          )}
+
+          {companyBriefSummary?.one_liner && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                One-liner
+              </p>
+              <p className="text-sm text-slate-700">
+                {companyBriefSummary.one_liner}
+              </p>
+            </div>
+          )}
+
+          {companyBriefSummary?.products_services?.length ? (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                Products / Services
+              </p>
+              <p className="text-sm text-slate-700">
+                {companyBriefSummary.products_services.join(', ')}
+              </p>
+            </div>
+          ) : null}
+
+          {companyBriefSummary?.customers_users?.length ? (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                Customers / Users
+              </p>
+              <p className="text-sm text-slate-700">
+                {companyBriefSummary.customers_users.join(', ')}
+              </p>
+            </div>
+          ) : null}
+
+          {companyBriefSummary?.positioning_claims?.length ? (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                Positioning / Claims
+              </p>
+              <p className="text-sm text-slate-700">
+                {companyBriefSummary.positioning_claims.join(', ')}
+              </p>
+            </div>
+          ) : null}
+
+          {companyBriefSummary?.risk_areas?.length ? (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                Risk areas
+              </p>
+              <p className="text-sm text-slate-700">
+                {companyBriefSummary.risk_areas.join(', ')}
+              </p>
+            </div>
+          ) : null}
+
+          {companyBriefSummary?.unknowns?.length ? (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                Unknowns
+              </p>
+              <p className="text-sm text-slate-700">
+                {companyBriefSummary.unknowns.join(', ')}
+              </p>
+            </div>
+          ) : null}
+
+          {companyBriefSummary?.generated_at && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                Generated at
+              </p>
+              <p className="text-sm text-slate-700">
+                {companyBriefSummary.generated_at}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={() => setIsCompanyContextOpen(false)}
+            className="text-sm font-medium text-slate-500 hover:text-slate-700 transition"
+          >
+            Close
+          </button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleCompanyContextEdit}
+              className="rounded-xl px-6"
+            >
+              {hasCompanyContext ? 'Edit context' : 'Add context'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null
 
   // Pre-session: Scenario selection
   if (status === 'idle' && !selectedScenario) {
+    const showCompanyModal =
+      companyContextStatus === 'idle' ||
+      companyContextStatus === 'loading' ||
+      companyContextStatus === 'error'
+
     return (
       <main className="min-h-screen overflow-hidden relative bg-[#FAFAFA]">
         {/* Background Dots */}
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_at_center,black_70%,transparent_100%)] opacity-100" />
+
+        {companyContextViewModal}
+
+        {showCompanyModal && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 backdrop-blur-sm px-4 sm:px-6 py-6 sm:py-8 overflow-y-auto">
+            <div className="w-full max-w-xl rounded-3xl bg-white shadow-[0_30px_120px_rgba(15,23,42,0.35)] border border-slate-100 p-6 sm:p-8 max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col min-h-0">
+              <div className="mb-6">
+                <h2 className="text-2xl font-light text-slate-900 tracking-tight">
+                  Add company context
+                </h2>
+                <p className="text-sm text-slate-500 mt-2">
+                  We’ll use the website to tailor interview questions and coaching.
+                  You can skip if you’re in a hurry.
+                </p>
+              </div>
+
+              <div className="space-y-4 flex-1 min-h-0 overflow-y-auto pr-2 -mr-2">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                    Company Website
+                  </label>
+                  <input
+                    type="url"
+                    value={companyUrlInput}
+                    onChange={(e) => setCompanyUrlInput(e.target.value)}
+                    placeholder="https://yourcompany.com"
+                    disabled={companyContextStatus === 'loading'}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-300 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    value={companyNotesInput}
+                    onChange={(e) => setCompanyNotesInput(e.target.value)}
+                    placeholder="Anything the AI should know (key messages, red lines, etc.)"
+                    disabled={companyContextStatus === 'loading'}
+                    rows={3}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-300 transition"
+                  />
+                </div>
+
+                {companyContextStatus === 'loading' && (
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                    Reading site… summarizing… preparing interview context…
+                  </div>
+                )}
+
+                {companyContextError && (
+                  <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {companyContextError}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  onClick={handleCompanyContextSkip}
+                  className="text-sm font-medium text-slate-500 hover:text-slate-700 transition"
+                  disabled={companyContextStatus === 'loading'}
+                >
+                  Skip for now
+                </button>
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={handleCompanyContextSubmit}
+                    disabled={companyContextStatus === 'loading'}
+                    className="rounded-xl px-6"
+                  >
+                    {companyContextStatus === 'loading' ? 'Analyzing…' : 'Continue'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="max-w-7xl mx-auto px-6 py-10 relative z-10">
           {/* Header */}
@@ -340,6 +658,17 @@ export default function SessionPage() {
               <p className="text-xl text-slate-500 mt-4 font-light max-w-2xl">
                 Select a structured scenario to simulate real-world pressure, or choose free practice for open coaching.
               </p>
+            </div>
+            <div className="flex items-start justify-end">
+              <button
+                onClick={() => setIsCompanyContextOpen(true)}
+                className="h-10 w-10 rounded-full border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:border-slate-300 transition flex items-center justify-center shadow-sm"
+                aria-label="View company context"
+              >
+                <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current">
+                  <path d="M10 1.5a8.5 8.5 0 100 17 8.5 8.5 0 000-17zm0 2a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 2.75a1 1 0 100 2 1 1 0 000-2zm-1 4h2v5h-2v-5z" />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -385,15 +714,15 @@ export default function SessionPage() {
                  </span>
                  <div className="relative inline-block">
                    <select
-                     value={partnerRole}
-                     onChange={(e) => setPartnerRole(e.target.value)}
+                     value={counterparty}
+                     onChange={(e) => setCounterparty(e.target.value as CounterpartyId)}
                      className="appearance-none bg-blue-50/50 hover:bg-blue-50 border border-blue-100 text-blue-700 py-2 pl-4 pr-10 rounded-xl text-lg font-medium leading-tight focus:outline-none focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
                    >
-                     <option value="Journalist">Journalist</option>
-                     <option value="Public">Public</option>
-                     <option value="StakeHolder">StakeHolder</option>
-                     <option value="Partner">Partner</option>
-                     <option value="Customer">Customer</option>
+                     <option value="journalist">Journalist</option>
+                     <option value="public">Public</option>
+                     <option value="stakeholder">Stakeholder</option>
+                     <option value="partner">Partner</option>
+                     <option value="customer">Customer</option>
                    </select>
                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-blue-500">
                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -414,12 +743,12 @@ export default function SessionPage() {
                  <div className="relative inline-block">
                    <select
                      value={situation}
-                     onChange={(e) => setSituation(e.target.value)}
+                     onChange={(e) => setSituation(e.target.value as SituationId)}
                      className="appearance-none bg-purple-50/50 hover:bg-purple-50 border border-purple-100 text-purple-700 py-2 pl-4 pr-10 rounded-xl text-lg font-medium leading-tight focus:outline-none focus:bg-white focus:border-purple-300 focus:ring-4 focus:ring-purple-500/10 transition-all cursor-pointer"
                    >
-                     <option value="Interview">Interview</option>
-                     <option value="Crisis">Crisis</option>
-                     <option value="Demo">Demo</option>
+                     <option value="interview">Interview</option>
+                     <option value="crisis">Crisis</option>
+                     <option value="demo">Demo</option>
                    </select>
                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-purple-500">
                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -435,6 +764,9 @@ export default function SessionPage() {
           <div className="bg-transparent">
             <ScenarioSelector
               onSelect={handleScenarioSelect}
+              counterparty={counterparty}
+              situation={situation}
+              selectedId={selectedScenario?.id ?? undefined}
             />
           </div>
         </div>
@@ -450,6 +782,8 @@ export default function SessionPage() {
 
       {/* Live Nudge Overlay */}
       <LiveNudge />
+
+      {companyContextViewModal}
 
       <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
         {/* Header */}
@@ -472,15 +806,26 @@ export default function SessionPage() {
           </div>
           
           {/* Status Badge */}
-          <div className={`px-4 py-2 rounded-full border backdrop-blur-sm shadow-sm flex items-center gap-2 ${
-            status === 'recording' || isConnected
-              ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
-              : 'bg-white border-slate-200 text-slate-600'
-          }`}>
-             <div className={`w-2 h-2 rounded-full ${status === 'recording' || isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-             <span className="text-xs font-bold uppercase tracking-widest">
-               {status === 'recording' || isConnected ? 'Session Active' : 'Ready'}
-             </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsCompanyContextOpen(true)}
+              className="h-9 w-9 rounded-full border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:border-slate-300 transition flex items-center justify-center shadow-sm"
+              aria-label="View company context"
+            >
+              <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current">
+                <path d="M10 1.5a8.5 8.5 0 100 17 8.5 8.5 0 000-17zm0 2a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 2.75a1 1 0 100 2 1 1 0 000-2zm-1 4h2v5h-2v-5z" />
+              </svg>
+            </button>
+            <div className={`px-4 py-2 rounded-full border backdrop-blur-sm shadow-sm flex items-center gap-2 ${
+              status === 'recording' || isConnected
+                ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
+                : 'bg-white border-slate-200 text-slate-600'
+            }`}>
+               <div className={`w-2 h-2 rounded-full ${status === 'recording' || isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+               <span className="text-xs font-bold uppercase tracking-widest">
+                 {status === 'recording' || isConnected ? 'Session Active' : 'Ready'}
+               </span>
+            </div>
           </div>
         </div>
 

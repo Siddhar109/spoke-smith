@@ -8,6 +8,7 @@ load_dotenv()
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from api.realtime import router as realtime_router
+from api.company_brief import router as company_brief_router
 from api.sessions import router as sessions_router
 from api.face_nudge import router as face_nudge_router
 
@@ -31,6 +32,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(realtime_router, prefix="/api/realtime", tags=["realtime"])
+app.include_router(company_brief_router, prefix="/api", tags=["company"])
 app.include_router(sessions_router, prefix="/api/sessions", tags=["sessions"])
 app.include_router(face_nudge_router, prefix="/api/face", tags=["face"])
 

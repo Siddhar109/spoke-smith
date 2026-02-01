@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { WordTiming } from '@/lib/analysis/voiceMetrics'
+import type { CounterpartyId, SituationId } from '@/lib/scenarios/types'
+import type { CompanyBriefSummary } from '@/lib/company/types'
 
 export type SessionStatus = 'idle' | 'connecting' | 'recording' | 'paused' | 'completed'
 export type AnalysisStatus = 'idle' | 'uploading' | 'analyzing' | 'complete' | 'error'
@@ -86,6 +88,8 @@ export interface PostSessionTranscript {
   words: WordTiming[]
 }
 
+export type CompanyContextStatus = 'idle' | 'loading' | 'ready' | 'error' | 'skipped'
+
 interface SessionState {
   // Session lifecycle
   status: SessionStatus
@@ -120,6 +124,14 @@ interface SessionState {
   // Selected scenario
   scenarioId: string | null
   mode: 'coach' | 'journalist'
+  counterparty: CounterpartyId
+  situation: SituationId
+
+  // Company context (client-carried)
+  companyUrl: string | null
+  companyNotes: string | null
+  companyBriefSummary: CompanyBriefSummary | null
+  companyContextStatus: CompanyContextStatus
 
   // Post-session analysis
   analysisStatus: AnalysisStatus
@@ -166,6 +178,12 @@ interface SessionActions {
   // Session config
   setScenario: (scenarioId: string | null) => void
   setMode: (mode: 'coach' | 'journalist') => void
+  setCounterparty: (counterparty: CounterpartyId) => void
+  setSituation: (situation: SituationId) => void
+  setCompanyUrl: (companyUrl: string | null) => void
+  setCompanyNotes: (companyNotes: string | null) => void
+  setCompanyBriefSummary: (summary: CompanyBriefSummary | null) => void
+  setCompanyContextStatus: (status: CompanyContextStatus) => void
 
   // Session lifecycle
   initSession: () => string // Generate and return sessionId
@@ -214,6 +232,12 @@ const initialState: SessionState = {
   audioBlob: null,
   scenarioId: null,
   mode: 'coach',
+  counterparty: 'journalist',
+  situation: 'interview',
+  companyUrl: null,
+  companyNotes: null,
+  companyBriefSummary: null,
+  companyContextStatus: 'idle',
   analysisStatus: 'idle',
   analysis: null,
   analysisError: null,
@@ -334,6 +358,18 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
   setScenario: (scenarioId) => set({ scenarioId }),
 
   setMode: (mode) => set({ mode }),
+
+  setCounterparty: (counterparty) => set({ counterparty }),
+
+  setSituation: (situation) => set({ situation }),
+
+  setCompanyUrl: (companyUrl) => set({ companyUrl }),
+
+  setCompanyNotes: (companyNotes) => set({ companyNotes }),
+
+  setCompanyBriefSummary: (companyBriefSummary) => set({ companyBriefSummary }),
+
+  setCompanyContextStatus: (companyContextStatus) => set({ companyContextStatus }),
 
   initSession: () => {
     const sessionId = crypto.randomUUID()
